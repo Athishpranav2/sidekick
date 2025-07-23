@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "256761319791",
+    "project_id": "sidekicker-4ef1b",
+    "storage_bucket": "sidekicker-4ef1b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:256761319791:android:0e16ba55b820901faad89a",
+        "android_client_info": {
+          "package_name": "com.example.campusswift_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "256761319791-7hkiosourr9413fsn6d9f0eqoslu4egn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campusswift_app",
+            "certificate_hash": "b8fc7ee628faa8c2cafb542822e7506222cb743c"
+          }
+        },
+        {
+          "client_id": "256761319791-dt2dbl9mlpjc7s5j3n01cod3dpb03isq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campusswift_app",
+            "certificate_hash": "cd4313977e9aafa119a25672eb548fd08d3c0ff6"
+          }
+        },
+        {
+          "client_id": "256761319791-utf2orc1d8ib4iproluhvd83h75054r3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5549ph1UuqD0T0RqQSuKu32vv0OYX3cQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "256761319791-utf2orc1d8ib4iproluhvd83h75054r3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "256761319791-eiuhrurlpgrsm69c3h7p1vt4q08346jh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.campusswiftApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
