@@ -6,9 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.sidekick"
+    namespace = "com.example.campusswift_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973" // ✅ Set explicitly
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -20,11 +20,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.sidekick"
-        minSdk = flutter.minSdkVersion
+        applicationId = "com.example.campusswift_app"
+        minSdk = 23 
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true // ✅ Optional safety
     }
 
     buildTypes {
@@ -39,7 +40,9 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:32.3.1")) // ✅ Firebase BOM
-    implementation("com.google.firebase:firebase-database")             // ✅ Realtime Database
-    // You can also add firestore or auth if needed
+    implementation(platform("com.google.firebase:firebase-bom:32.3.1"))
+    implementation("com.google.firebase:firebase-database")
+    // Add more Firebase SDKs as needed:
+    // implementation("com.google.firebase:firebase-auth")
+    // implementation("com.google.firebase:firebase-firestore")
 }
