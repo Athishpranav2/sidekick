@@ -3,9 +3,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'time_selection_screen.dart'; // Import the new screen
+import 'match_progress_screen.dart'; // Import the match progress screen
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class SideTableScreen extends StatelessWidget {
+class SideTableScreen extends StatefulWidget {
   const SideTableScreen({super.key});
+
+  @override
+  State<SideTableScreen> createState() => _SideTableScreenState();
+}
+
+class _SideTableScreenState extends State<SideTableScreen> {
+  bool _hasActiveQueue = false;
+  bool _hasRecentMatches = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserStatus();
+  }
+
+  Future<void> _checkUserStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Check for active queue entries
+      final queueSnapshot = await FirebaseFirestore.instance
+          .collection('matchingQueue')
+          .where('userId', isEqualTo: user.uid)
+          .where('status', isEqualTo: 'waiting')
+          .get();
+
+      // Check for recent matches (today)
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final matchesSnapshot = await FirebaseFirestore.instance
+          .collection('matches')
+          .where('users', arrayContains: user.uid)
+          .where(
+            'matchedAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _hasActiveQueue = queueSnapshot.docs.isNotEmpty;
+          _hasRecentMatches = matchesSnapshot.docs.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +76,10 @@ class SideTableScreen extends StatelessWidget {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             children: [
-              // Using SizedBox for spacing instead of Spacer
-              SizedBox(height: size.height * 0.08), // Reduced top spacing
+              // Top section with notification icon
+              SizedBox(height: size.height * 0.02),
+              _buildTopSection(context, size),
+              SizedBox(height: size.height * 0.06),
               Text(
                 'Side Table',
                 style: TextStyle(
@@ -54,6 +108,75 @@ class SideTableScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTopSection(BuildContext context, Size size) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const MatchProgressScreen(),
+              ),
+            );
+          },
+          child: Container(
+            width: size.width * 0.11,
+            height: size.width * 0.11,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1E),
+              borderRadius: BorderRadius.circular(size.width * 0.055),
+              border: Border.all(color: const Color(0xFF2C2C2E), width: 1),
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white70,
+                    size: size.width * 0.055,
+                  ),
+                ),
+                // Show indicator dot if user has active queue or recent matches
+                if (_hasActiveQueue || _hasRecentMatches)
+                  Positioned(
+                    top: size.width * 0.02,
+                    right: size.width * 0.02,
+                    child: Container(
+                      width: size.width * 0.025,
+                      height: size.width * 0.025,
+                      decoration: BoxDecoration(
+                        color: _hasActiveQueue
+                            ? const Color(0xFFDC2626) // Red for active queue
+                            : const Color(
+                                0xFF10B981,
+                              ), // Green for recent matches
+                        borderRadius: BorderRadius.circular(
+                          size.width * 0.0125,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                (_hasActiveQueue
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFF10B981))
+                                    .withOpacity(0.4),
+                            blurRadius: 4,
+                            spreadRadius: 0.5,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

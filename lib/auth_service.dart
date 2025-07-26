@@ -27,10 +27,10 @@ class AuthService {
       }
 
       // Allow only PSG email domains
-      if (!googleUser.email.endsWith('@psgtech.ac.in')) {
-        await _googleSignIn.signOut();
-        throw Exception('Sorry, only for PSG students for now.');
-      }
+      // if (!googleUser.email.endsWith('@psgtech.ac.in')) {
+      //  await _googleSignIn.signOut();
+      //  throw Exception('Sorry, only for PSG students for now.');
+      // }
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;

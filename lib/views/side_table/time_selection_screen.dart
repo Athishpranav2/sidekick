@@ -2,7 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:math'; // For generating mock data
+import 'dart:async';
+import 'dart:math';
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'match_progress_screen.dart';
 
 // Data model for a time slot to hold the live count
 class TimeSlot {
@@ -11,7 +17,6 @@ class TimeSlot {
 
   TimeSlot({required this.time, required this.waitingCount});
 
-  // Override for proper comparison in the List
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -31,24 +36,51 @@ class TimeSelectionScreen extends StatefulWidget {
 }
 
 class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
-  // Use a List to store multiple selected times
   final List<TimeSlot> _selectedTimes = [];
+  late DateTime _now;
+  late Timer _timer;
+  bool _isTestMode = false;
+  bool _isJoiningQueue = false;
 
-  // Mock data for available time slots with live counts
   final List<TimeSlot> _availableTimes = [
-    TimeSlot(
-      time: '10:10 AM',
-      waitingCount: Random().nextInt(5),
-    ), // Generates a random number 0-4
-    TimeSlot(
-      time: '12:10 PM',
-      waitingCount: Random().nextInt(15),
-    ), // More popular time
+    TimeSlot(time: '10:10 AM', waitingCount: Random().nextInt(5)),
+    TimeSlot(time: '12:10 PM', waitingCount: Random().nextInt(15)),
     TimeSlot(time: '03:20 PM', waitingCount: Random().nextInt(8)),
     TimeSlot(time: '05:00 PM', waitingCount: Random().nextInt(3)),
   ];
 
-  // Toggle selection logic
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  DateTime _parseTime(String time) {
+    final format = DateFormat("h:mm a");
+    final parsedTime = format.parse(time);
+    final now = DateTime.now();
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+      parsedTime.hour,
+      parsedTime.minute,
+    );
+  }
+
   void _toggleTimeSelection(TimeSlot slot) {
     HapticFeedback.lightImpact();
     setState(() {
@@ -58,6 +90,152 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
         _selectedTimes.add(slot);
       }
     });
+  }
+
+  void _toggleTestMode() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _isTestMode = !_isTestMode;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF1C1C1E),
+        content: Text(
+          'Developer Mode: ${_isTestMode ? "ON" : "OFF"}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  void _showConfirmationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1C1C1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDC2626),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 30),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'You\'re in the queue!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'You will be matched with someone and we\'ll notify you when it\'s time to meet.',
+                style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    // NAVIGATE WITHOUT THE UNUSED PARAMETER
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MatchProgressScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continue',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _joinMatchingQueue() async {
+    if (_selectedTimes.isEmpty || _isJoiningQueue) return;
+
+    setState(() {
+      _isJoiningQueue = true;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: You are not logged in.')),
+      );
+      setState(() {
+        _isJoiningQueue = false;
+      });
+      return;
+    }
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final queueCollection = FirebaseFirestore.instance.collection(
+        'matchingQueue',
+      );
+
+      for (final slot in _selectedTimes) {
+        final docRef = queueCollection.doc();
+        batch.set(docRef, {
+          'userId': user.uid,
+          'timeSlot': slot.time,
+          'status': 'waiting',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+
+      if (mounted) {
+        setState(() {
+          _isJoiningQueue = false;
+        });
+        _showConfirmationDialog();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to join queue: $e')));
+        setState(() {
+          _isJoiningQueue = false;
+        });
+      }
+    }
   }
 
   @override
@@ -73,16 +251,18 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Select Meetup Time',
-          style: TextStyle(
-            fontSize: size.width * 0.045,
-            fontWeight: FontWeight.w600,
+        title: GestureDetector(
+          onLongPress: _toggleTestMode,
+          child: Text(
+            'Select Meetup Time',
+            style: TextStyle(
+              fontSize: size.width * 0.045,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         centerTitle: true,
       ),
-      // Using a Column with an Expanded ListView to fix overflow issues
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: size.width * 0.06),
         child: Column(
@@ -108,7 +288,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
                 ],
               ),
             ),
-            // The button is now outside the scrollable area, preventing overflow
             _buildConfirmButton(size),
             SizedBox(height: size.height * 0.05),
           ],
@@ -125,7 +304,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
         borderRadius: BorderRadius.circular(size.width * 0.04),
       ),
       child: Row(
-        // Vertically center the icon and text
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
@@ -179,8 +357,27 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
 
   Widget _buildTimeChip(TimeSlot slot, Size size) {
     final bool isSelected = _selectedTimes.contains(slot);
+    final DateTime slotTime = _parseTime(slot.time);
+    final bool isPast = !_isTestMode && _now.isAfter(slotTime);
+
+    Color backgroundColor = isSelected
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF1C1C1E);
+    Color borderColor = isSelected
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF2C2C2E);
+    Color mainTextColor = isSelected ? Colors.white : Colors.grey[300]!;
+    Color subTextColor = isSelected ? Colors.white70 : Colors.grey[600]!;
+
+    if (isPast) {
+      backgroundColor = const Color(0xFF1C1C1E);
+      borderColor = Colors.transparent;
+      mainTextColor = Colors.grey[700]!;
+      subTextColor = Colors.grey[800]!;
+    }
+
     return GestureDetector(
-      onTap: () => _toggleTimeSelection(slot),
+      onTap: isPast ? null : () => _toggleTimeSelection(slot),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(
@@ -188,14 +385,9 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
           vertical: size.height * 0.015,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF1C1C1E),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(size.width * 0.035),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFDC2626)
-                : const Color(0xFF2C2C2E),
-            width: 1.5,
-          ),
+          border: Border.all(color: borderColor, width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -203,32 +395,43 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
             Text(
               slot.time,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[300],
+                color: mainTextColor,
                 fontSize: size.width * 0.045,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                decoration: isPast
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
               ),
             ),
             SizedBox(height: size.height * 0.008),
-            // The new "live count" indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.person,
-                  color: isSelected ? Colors.white70 : Colors.grey[600],
-                  size: size.width * 0.035,
-                ),
-                SizedBox(width: size.width * 0.01),
-                Text(
-                  '${slot.waitingCount} waiting',
-                  style: TextStyle(
-                    color: isSelected ? Colors.white70 : Colors.grey[600],
-                    fontSize: size.width * 0.03,
-                    fontWeight: FontWeight.w500,
+            isPast
+                ? Text(
+                    'Closed for today',
+                    style: TextStyle(
+                      color: subTextColor,
+                      fontSize: size.width * 0.03,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.person,
+                        color: subTextColor,
+                        size: size.width * 0.035,
+                      ),
+                      SizedBox(width: size.width * 0.01),
+                      Text(
+                        '${slot.waitingCount} waiting',
+                        style: TextStyle(
+                          color: subTextColor,
+                          fontSize: size.width * 0.03,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -237,30 +440,20 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
 
   Widget _buildConfirmButton(Size size) {
     final bool canConfirm = _selectedTimes.isNotEmpty;
-
-    // Changed button text for a more engaging feel
     String buttonText = 'Select a Time';
     if (canConfirm) {
       buttonText = 'Enter the Canteen';
     }
 
     return GestureDetector(
-      onTap: canConfirm
-          ? () {
-              // TODO: Implement logic to enter the matching queue with selected times
-            }
-          : null,
+      onTap: canConfirm && !_isJoiningQueue ? _joinMatchingQueue : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          vertical: size.height * 0.022,
-        ), // Reduced padding
+        padding: EdgeInsets.symmetric(vertical: size.height * 0.022),
         decoration: BoxDecoration(
           color: canConfirm ? const Color(0xFFDC2626) : Colors.grey[850],
-          borderRadius: BorderRadius.circular(
-            size.width * 0.04,
-          ), // Adjusted radius
+          borderRadius: BorderRadius.circular(size.width * 0.04),
           boxShadow: !canConfirm
               ? []
               : [
@@ -273,14 +466,23 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
                 ],
         ),
         child: Center(
-          child: Text(
-            buttonText,
-            style: TextStyle(
-              fontSize: size.width * 0.042, // Adjusted font size
-              fontWeight: FontWeight.bold,
-              color: canConfirm ? Colors.white : Colors.grey[600],
-            ),
-          ),
+          child: _isJoiningQueue
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  buttonText,
+                  style: TextStyle(
+                    fontSize: size.width * 0.042,
+                    fontWeight: FontWeight.bold,
+                    color: canConfirm ? Colors.white : Colors.grey[600],
+                  ),
+                ),
         ),
       ),
     );
