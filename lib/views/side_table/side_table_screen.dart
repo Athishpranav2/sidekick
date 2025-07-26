@@ -118,7 +118,7 @@ class SideTableScreen extends StatelessWidget {
           width: size.width * 0.1, // Adaptive size
           height: size.width * 0.1, // Adaptive size
           decoration: BoxDecoration(
-            color: const Color(0xFFDC2626).withOpacity(0.1),
+            color: const Color(0xFFDC2626).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(
               size.width * 0.03,
             ), // Adaptive radius

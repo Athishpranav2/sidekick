@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../side_table/side_table_screen.dart';
-import '../vent_corner/vent_corner_screen.dart';
+import '../vent_corner/vent_corner_screen.dart'; // Will update class name below
 import '../profile/profile_screen.dart';
 
 class NavigationContainer extends StatefulWidget {
@@ -50,7 +50,7 @@ class _NavigationContainerState extends State<NavigationContainer> {
             BottomNavigationBarItem(
               icon: const Icon(Icons.chat_bubble_outline_rounded),
               activeIcon: const Icon(Icons.chat_bubble_rounded),
-              label: 'Vent Corner',
+              label: 'SideTalk',
             ),
             // The new middle item with a table icon
             BottomNavigationBarItem(

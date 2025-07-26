@@ -265,7 +265,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
               ? []
               : [
                   BoxShadow(
-                    color: const Color(0xFFDC2626).withOpacity(0.4),
+                    color: const Color(0xFFDC2626).withValues(alpha: 0.4),
                     blurRadius: 20,
                     spreadRadius: -8,
                     offset: const Offset(0, 8),

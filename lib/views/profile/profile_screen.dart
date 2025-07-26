@@ -103,7 +103,7 @@ class ProfileScreen extends StatelessWidget {
             top: size.height * 0.01,
           ),
           child: Material(
-            color: const Color(0xFF1C1C1E).withOpacity(0.8),
+            color: const Color(0xFF1C1C1E).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(20),
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
@@ -125,7 +125,7 @@ class ProfileScreen extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: const Color(0xFF000000).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user_model.dart';
 import '../../auth_service.dart';
@@ -25,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // List of the pages that the navigation bar will switch between
   static const List<Widget> _pages = <Widget>[
     SideTablePage(), // Your main feature page
-    VentCornerScreen(),
+    SideTalkScreen(),
     ProfileScreen(),
   ];
 
@@ -52,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.forum_outlined),
             activeIcon: Icon(Icons.forum),
-            label: 'Vent Corner',
+            label: 'SideTalk',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded),
@@ -104,7 +103,7 @@ class SideTablePage extends StatelessWidget {
               Icon(
                 Icons.coffee_rounded,
                 size: 80,
-                color: const Color(0xFFDC2626).withOpacity(0.8),
+                color: const Color(0xFFDC2626).withValues(alpha: 0.8),
               ),
               const SizedBox(height: 32),
               const Text(
@@ -155,16 +154,16 @@ class SideTablePage extends StatelessWidget {
   }
 }
 
-/// The "Vent Corner" feature page
-class VentCornerScreen extends StatelessWidget {
-  const VentCornerScreen({super.key});
+/// The "SideTalk" feature page
+class SideTalkScreen extends StatelessWidget {
+  const SideTalkScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Vent Corner'),
+        title: const Text('SideTalk'),
         backgroundColor: Colors.black,
         elevation: 0,
       ),
@@ -179,7 +178,7 @@ class VentCornerScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Vent Corner Coming Soon',
+              'SideTalk Coming Soon',
               style: TextStyle(color: Colors.white, fontSize: 22),
             ),
           ],
