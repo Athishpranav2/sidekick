@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:math';
 import '../models/post.dart';
 import '../models/comment.dart';
+import '../core/services/comment_service.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
@@ -16,29 +17,7 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
-  final List<Comment> _comments = [
-    Comment(
-      id: '1',
-      content: 'I feel this so much. Sometimes it\'s hard to be authentic when everyone expects you to be someone else.',
-      username: 'atryuz',
-      isAnonymous: false,
-      timestamp: '5m',
-    ),
-    Comment(
-      id: '2',
-      content: 'Thank you for sharing this. It takes courage to be vulnerable.',
-      username: '',
-      isAnonymous: true,
-      timestamp: '3m',
-    ),
-    Comment(
-      id: '3',
-      content: 'You\'re not alone in feeling this way. We all wear masks sometimes.',
-      username: 'midnight_soul',
-      isAnonymous: false,
-      timestamp: '1m',
-    ),
-  ];
+  bool _isLoading = false;
 
   bool get _hasInputText => _commentController.text.trim().isNotEmpty;
 
@@ -56,18 +35,42 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     super.dispose();
   }
 
-  void _sendComment() {
-    if (_hasInputText) {
+  void _sendComment() async {
+    if (_hasInputText && !_isLoading) {
       setState(() {
-        _comments.add(Comment(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: _commentController.text.trim(),
-          username: 'You',
-          isAnonymous: false,
-          timestamp: 'now',
-        ));
+        _isLoading = true;
       });
-      _commentController.clear();
+
+      final success = await CommentService.addComment(
+        postId: widget.post.id,
+        content: _commentController.text.trim(),
+        isAnonymous: false, // For now, always post as named user
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        _commentController.clear();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Comment added successfully!'),
+              backgroundColor: Color(0xFFDC2626),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to add comment. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -261,37 +264,75 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       
                       const SizedBox(height: 20),
                       
-                      // Comments Section Header with improved design
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            const Text(
-                              '💬',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Comments (${_comments.length})',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                      // Comments Section with StreamBuilder
+                      StreamBuilder<List<Comment>>(
+                        stream: CommentService.getCommentsStream(widget.post.id),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFDC2626),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Comments List
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _comments.length,
-                        itemBuilder: (context, index) {
-                          return _buildCommentItem(_comments[index]);
+                            );
+                          }
+
+                          final comments = snapshot.data ?? [];
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Comments Section Header
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      '💬',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Comments (${comments.length})',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Comments List
+                              if (comments.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Center(
+                                    child: Text(
+                                      'No comments yet. Be the first to comment!',
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: comments.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildCommentItem(comments[index]);
+                                  },
+                                ),
+                            ],
+                          );
                         },
                       ),
                       
@@ -342,18 +383,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _hasInputText ? _sendComment : null,
+                  onTap: (_hasInputText && !_isLoading) ? _sendComment : null,
                   child: Container(
                     padding: const EdgeInsets.all(6), // Smaller send button
                     decoration: BoxDecoration(
-                      color: _hasInputText ? const Color(0xFFDC2626) : Colors.transparent,
+                      color: (_hasInputText && !_isLoading) ? const Color(0xFFDC2626) : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(
-                      Icons.send,
-                      color: _hasInputText ? Colors.white : const Color(0xFF666666),
-                      size: 18, // Smaller icon size
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            Icons.send,
+                            color: (_hasInputText && !_isLoading) ? Colors.white : const Color(0xFF666666),
+                            size: 18, // Smaller icon size
+                          ),
                   ),
                 ),
               ],
