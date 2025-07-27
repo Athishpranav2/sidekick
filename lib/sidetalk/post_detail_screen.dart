@@ -1,0 +1,563 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:math';
+import '../models/post.dart';
+import '../models/comment.dart';
+
+class PostDetailScreen extends StatefulWidget {
+  final Post post;
+
+  const PostDetailScreen({super.key, required this.post});
+
+  @override
+  State<PostDetailScreen> createState() => _PostDetailScreenState();
+}
+
+class _PostDetailScreenState extends State<PostDetailScreen> {
+  final TextEditingController _commentController = TextEditingController();
+  final List<Comment> _comments = [
+    Comment(
+      id: '1',
+      content: 'I feel this so much. Sometimes it\'s hard to be authentic when everyone expects you to be someone else.',
+      username: 'atryuz',
+      isAnonymous: false,
+      timestamp: '5m',
+    ),
+    Comment(
+      id: '2',
+      content: 'Thank you for sharing this. It takes courage to be vulnerable.',
+      username: '',
+      isAnonymous: true,
+      timestamp: '3m',
+    ),
+    Comment(
+      id: '3',
+      content: 'You\'re not alone in feeling this way. We all wear masks sometimes.',
+      username: 'midnight_soul',
+      isAnonymous: false,
+      timestamp: '1m',
+    ),
+  ];
+
+  bool get _hasInputText => _commentController.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController.addListener(() {
+      setState(() {}); // Rebuild to update send button state
+    });
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  void _sendComment() {
+    if (_hasInputText) {
+      setState(() {
+        _comments.add(Comment(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: _commentController.text.trim(),
+          username: 'You',
+          isAnonymous: false,
+          timestamp: 'now',
+        ));
+      });
+      _commentController.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF000000),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF000000),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Top Bar (Header)
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.post.isAnonymous ? 'Anonymous Post' : '${widget.post.username}\'s Post',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${widget.post.timestamp} ago',
+                            style: const TextStyle(
+                              color: Color(0xFF888888),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Post Section with card-style container
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E), // Slightly darker card for contrast
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // User info row with improved layout
+                            Row(
+                              children: [
+                                _buildAvatar(),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.post.isAnonymous 
+                                            ? 'Anonymous' 
+                                            : '@${widget.post.username}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        widget.post.timestamp,
+                                        style: const TextStyle(
+                                          color: Color(0xFF888888),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Post content
+                            Text(
+                              widget.post.content,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                height: 1.5,
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Tags
+                            Wrap(
+                              spacing: 6,
+                              children: [
+                                _buildTag('#general'),
+                                if (!widget.post.isAnonymous) _buildTag('#public'),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Post stats with emoji icons
+                            Row(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '❤️',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${widget.post.likes}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF888888),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 20),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '💬',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${widget.post.comments}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF888888),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Separator line with proper padding
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        height: 1,
+                        color: const Color(0xFF333333),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Comments Section Header with improved design
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            const Text(
+                              '💬',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Comments (${_comments.length})',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Comments List
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _comments.length,
+                        itemBuilder: (context, index) {
+                          return _buildCommentItem(_comments[index]);
+                        },
+                      ),
+                      
+                      const SizedBox(height: 80), // Space for input bar
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Input Bar (Bottom) - Sticky
+        bottomNavigationBar: Container(
+          color: const Color(0xFF000000),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 8,
+            bottom: MediaQuery.of(context).padding.bottom + 8,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F1F1F), // Slightly lighter background
+              borderRadius: BorderRadius.circular(20), // Increased border radius
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: '💬 Add a comment…', // Added emoji to placeholder
+                      hintStyle: TextStyle(
+                        color: Color(0xFF666666),
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12), // Improved padding
+                    ),
+                    maxLines: null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _hasInputText ? _sendComment : null,
+                  child: Container(
+                    padding: const EdgeInsets.all(6), // Smaller send button
+                    decoration: BoxDecoration(
+                      color: _hasInputText ? const Color(0xFFDC2626) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.send,
+                      color: _hasInputText ? Colors.white : const Color(0xFF666666),
+                      size: 18, // Smaller icon size
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    if (widget.post.isAnonymous) {
+      // For anonymous posts, randomly choose male or female avatar
+      final random = Random(widget.post.id.hashCode); // Use post ID as seed for consistency
+      final isMale = random.nextBool();
+      
+      // Choose a random avatar from the appropriate gender folder
+      if (isMale) {
+        final maleAvatarIndex = random.nextInt(5) + 1; // 1-5
+        return Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF333333),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SvgPicture.asset(
+              'assets/avatar/anon_logos/male/male_$maleAvatarIndex.svg',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      } else {
+        final femaleAvatarIndex = random.nextInt(6) + 1; // 1-6
+        return Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF333333),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SvgPicture.asset(
+              'assets/avatar/anon_logos/female/female_$femaleAvatarIndex.svg',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      }
+    } else {
+      String displayText = widget.post.username != null 
+          ? widget.post.username!.length >= 2 
+              ? widget.post.username!.substring(0, 2).toUpperCase()
+              : widget.post.username!.substring(0, 1).toUpperCase()
+          : '2';
+      
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDC2626),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Text(
+            displayText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildTag(String tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFF333333),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        tag,
+        style: const TextStyle(
+          color: Color(0xFFBBBBBB),
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommentItem(Comment comment) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10, left: 16, right: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Username with avatar
+          Row(
+            children: [
+              _buildCommentAvatar(comment),
+              const SizedBox(width: 8),
+              Text(
+                comment.isAnonymous ? 'Anonymous' : comment.username,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          
+          // Comment bubble with improved styling
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C2C2C), // Updated background color
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  comment.content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  comment.timestamp,
+                  style: const TextStyle(
+                    color: Color(0xFF999999), // Lighter gray for timestamp
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build comment avatars
+  Widget _buildCommentAvatar(Comment comment) {
+    if (comment.isAnonymous) {
+      // For anonymous comments, use a simple emoji or icon
+      return Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: const Color(0xFF444444),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: Text(
+            '👤',
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
+      );
+    } else {
+      // For named users, show initials in colored circle
+      String initials = comment.username.isNotEmpty 
+          ? comment.username.length >= 2 
+              ? comment.username.substring(0, 2).toUpperCase()
+              : comment.username.substring(0, 1).toUpperCase()
+          : 'U';
+      
+      return Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDC2626),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            initials,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+}

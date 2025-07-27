@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,16 +27,48 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Set system UI overlay style to prevent grey glitch
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Color(0xFF000000),
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ));
+
     // You need to provide your AuthService here if ProfileScreen uses it.
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         title: 'Sidekick',
         debugShowCheckedModeBanner: false,
-        home: AuthWrapper(),
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF000000),
+          primarySwatch: Colors.red,
+          useMaterial3: true,
+          // Fix page transitions to prevent grey background
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            },
+          ),
+          // Set app bar theme
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF000000),
+            elevation: 0,
+            systemOverlayStyle: SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light,
+            ),
+          ),
+        ),
+        home: const AuthWrapper(),
       ),
     );
   }

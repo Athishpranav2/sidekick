@@ -30,6 +30,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
       );
       return;
     }
+    
     setState(() => _isLoading = true);
 
     try {
@@ -37,7 +38,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
       if (user == null) {
         throw Exception('User not authenticated. Please log in again.');
       }
-
+      
       String? username;
       if (!_isAnonymous) {
         // In a real app, you'd get the username from your user profile data
@@ -55,31 +56,31 @@ class _ComposeScreenState extends State<ComposeScreen> {
         'comments': [],
         'status': 'approved', // Or 'pending' for moderation
       });
-
-      // Pop until Sidetalk/VentCornerScreen is visible
-      bool popped = false;
-      Navigator.of(context).popUntil((route) {
-        if (!popped && route.settings.name != null && route.settings.name!.contains('vent_corner')) {
-          popped = true;
-          return true;
-        }
-        return false;
-      });
-      if (!popped) {
-        Navigator.of(context).maybePop(); // fallback if no named route
+      
+      // Navigate back to the previous screen
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your confession has been posted!'),
+            backgroundColor: kPrimaryRed,
+          ),
+        );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Your confession has been posted!'),
-          backgroundColor: kPrimaryRed,
-        ),
-      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to post confession: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to post confession: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

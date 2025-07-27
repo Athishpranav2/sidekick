@@ -18,23 +18,33 @@ class FilterButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        height: 36, // Fixed height for consistent alignment
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // px-12 py-6 as specified
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDC2626) : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
+          color: isSelected ? const Color(0xFFAA1C1C) : Colors.transparent,
+          borderRadius: BorderRadius.circular(24), // 24px border radius as specified
           border: Border.all(
-            color: isSelected ? const Color(0xFFDC2626) : Colors.white.withOpacity(0.3),
-            width: 1,
+            color: isSelected ? const Color(0xFFAA1C1C) : Colors.white.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
           ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color(0xFFAA1C1C).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: Colors.white.withOpacity(isSelected ? 1.0 : 0.7),
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-            fontFamily: 'BebasNeue', // If not available, fallback handled by pubspec
+        child: Center( // Center the text properly
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withOpacity(isSelected ? 1.0 : 0.7),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+            textAlign: TextAlign.center, // Ensure text is centered
           ),
         ),
       ),
