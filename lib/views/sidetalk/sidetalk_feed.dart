@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'post_card.dart';
 import 'filter_button.dart';
 import 'filter_modal.dart';
-import '../models/post.dart';
-import '../models/filter_options.dart';
-import '../views/compose/compose_screen.dart';
+import '../../models/post.dart';
+import '../../models/filter_options.dart';
+import '../compose/compose_screen.dart';
 
 class SidetalkFeed extends StatefulWidget {
   const SidetalkFeed({super.key});

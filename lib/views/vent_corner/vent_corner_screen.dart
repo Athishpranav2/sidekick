@@ -4,8 +4,8 @@ import 'package:sidekick/providers/user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:sidekick/views/compose/compose_screen.dart';
-import 'package:sidekick/sidetalk/filter_button.dart';
-import 'package:sidekick/sidetalk/post_card.dart';
+import 'package:sidekick/views/sidetalk/filter_button.dart';
+import 'package:sidekick/views/sidetalk/post_card.dart';
 import 'package:sidekick/models/post.dart';
 import 'package:sidekick/views/vent_corner/comment_thread_modal.dart';
 

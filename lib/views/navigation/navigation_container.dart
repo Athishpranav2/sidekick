@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../sidetalk/sidetalk_feed.dart';
 import '../side_table/side_table_screen.dart';
-import '../vent_corner/vent_corner_screen.dart'; // Will update class name below
 import '../profile/profile_screen.dart';
 
 class NavigationContainer extends StatefulWidget {
@@ -19,7 +19,7 @@ class _NavigationContainerState extends State<NavigationContainer> {
 
   // Re-ordered the list of pages to match the new navigation bar layout
   static const List<Widget> _pages = <Widget>[
-    VentCornerScreen(),
+    SidetalkFeed(),
     SideTableScreen(),
     ProfileScreen(),
   ];

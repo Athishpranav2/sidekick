@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/filter_options.dart';
+import '../../models/filter_options.dart';
 
 class FilterModal extends StatefulWidget {
   final FilterState currentFilter;

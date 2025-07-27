@@ -2,7 +2,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/user_model.dart';
 
 class OnboardingLogic {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -195,7 +194,7 @@ class OnboardingLogic {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (!doc.exists) return false;
 
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       return data?['onboardingCompleted'] == true;
     } catch (e) {
       print('Error checking onboarding status: $e');

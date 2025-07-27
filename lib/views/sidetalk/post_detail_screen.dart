@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../models/post.dart';
-import '../models/comment.dart';
-import '../core/services/comment_service.dart';
+import '../../models/post.dart';
+import '../../models/comment.dart';
+import '../../core/services/comment_service.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
