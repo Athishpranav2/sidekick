@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:ui';
 
 // This will be your logic file.
 import './match_progress_logic.dart';
@@ -18,22 +17,23 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     with TickerProviderStateMixin {
   late final MatchProgressController _controller;
   late ScrollController _scrollController;
-  // Controller for the new loading animation
   late AnimationController _loadingAnimController;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
-  // Refined color palette with a full black background
-  static const Color primaryRed = Color(0xFFFF453A);
-  static const Color backgroundColor = Color(
-    0xFF000000,
-  ); // Full black background
-  static const Color cardColor = Color(0xFF1C1C1E); // Kept for cards
-  static const Color secondaryCardColor = Color(0xFF2C2C2E);
-  static const Color borderColor = Color(0xFF38383A);
+  // Dark mode with red accent color palette
+  static const Color primaryAction = Color(0xFFFF3B30);
+  static const Color surfacePrimary = Color(0xFF000000);
+  static const Color surfaceSecondary = Color(0xFF111111);
+  static const Color surfaceTertiary = Color(0xFF1C1C1E);
+  static const Color strokeLight = Color(0xFF2C2C2E);
+  static const Color strokeMedium = Color(0xFF3A3A3C);
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF98989E);
-  static const Color textTertiary = Color(0xFF646468);
+  static const Color textSecondary = Color(0xFFAAAAAA);
+  static const Color textTertiary = Color(0xFF666666);
   static const Color successColor = Color(0xFF32D74B);
-  static const Color warningColor = Color(0xFFFF9F0A);
+  static const Color warningColor = Color(0xFFFFCC02);
+  static const Color criticalColor = Color(0xFFFF3B30);
 
   @override
   void initState() {
@@ -45,87 +45,134 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
         if (mounted) setState(() {});
       },
     );
-    // Initialize the new loading animation controller
+
     _loadingAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 2400),
     )..repeat();
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+
     _controller.initialize(context);
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _controller.dispose();
-    _loadingAnimController.dispose(); // Dispose the new controller
+    _loadingAnimController.dispose();
+    _fadeController.dispose();
     super.dispose();
+  }
+
+  // Responsive helper methods
+  double _getScreenWidth(BuildContext context) =>
+      MediaQuery.of(context).size.width;
+  double _getScreenHeight(BuildContext context) =>
+      MediaQuery.of(context).size.height;
+
+  bool _isTablet(BuildContext context) => _getScreenWidth(context) >= 768;
+  bool _isLargeScreen(BuildContext context) => _getScreenWidth(context) >= 1024;
+
+  double _getHorizontalPadding(BuildContext context) {
+    final width = _getScreenWidth(context);
+    if (width >= 1024) return 48; // Large screens
+    if (width >= 768) return 32; // Tablets
+    return 20; // Phones
+  }
+
+  double _getCardPadding(BuildContext context) {
+    final width = _getScreenWidth(context);
+    if (width >= 1024) return 40; // Large screens
+    if (width >= 768) return 36; // Tablets
+    return 32; // Phones
+  }
+
+  double _getMaxWidth(BuildContext context) {
+    final width = _getScreenWidth(context);
+    if (width >= 1024) return 800; // Max width for large screens
+    return width; // Use full width for smaller screens
+  }
+
+  void _navigateToChat(String matchId, String otherUserId) {
+    HapticFeedback.selectionClick();
+    // TODO: Replace with actual chat navigation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Opening chat...',
+          style: TextStyle(
+            color: textPrimary,
+            fontSize: _isTablet(context) ? 16 : 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: surfaceSecondary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: EdgeInsets.all(_isTablet(context) ? 20 : 16),
+        elevation: 0,
+        duration: const Duration(milliseconds: 1200),
+      ),
+    );
+  }
+
+  String _truncateName(String name, {int maxLength = 20}) {
+    final adjustedLength = _isTablet(context) ? maxLength + 10 : maxLength;
+    if (name.length <= adjustedLength) return name;
+    return '${name.substring(0, adjustedLength)}…';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: _buildAppBar(),
-      body: _controller.isLoading ? _buildLoadingState() : _buildContent(),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: backgroundColor,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.light,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: textPrimary,
-          size: 22,
+      backgroundColor: surfacePrimary,
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            width: _getMaxWidth(context),
+            child: _controller.isLoading
+                ? _buildLoadingState()
+                : _buildContent(),
+          ),
         ),
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          Navigator.of(context).pop();
-        },
-      ),
-      title: const Text(
-        'Activity Hub',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-      ),
-      centerTitle: true,
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1.0),
-        child: Container(color: borderColor.withOpacity(0.5), height: 1.0),
       ),
     );
   }
 
-  // --- NEW LOADING STATE WIDGET ---
   Widget _buildLoadingState() {
+    final loadingSize = _isTablet(context) ? 160.0 : 120.0;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // The new custom animation
           AnimatedBuilder(
             animation: _loadingAnimController,
             builder: (context, child) {
               return CustomPaint(
-                painter: _RadarPainter(_loadingAnimController.value),
-                child: const SizedBox(width: 150, height: 150),
+                painter: _MinimalLoadingPainter(_loadingAnimController.value),
+                child: SizedBox(width: loadingSize, height: loadingSize),
               );
             },
           ),
-          const SizedBox(height: 48),
-          // Updated text
-          const Text(
-            'Finding your Sidekicker...',
+          SizedBox(height: _isTablet(context) ? 56 : 48),
+          Text(
+            'Finding your connection',
             style: TextStyle(
               color: textSecondary,
-              fontSize: 17,
-              fontWeight: FontWeight.w500,
+              fontSize: _isTablet(context) ? 19 : 17,
+              fontWeight: FontWeight.w400,
+              letterSpacing: -0.2,
             ),
           ),
         ],
@@ -134,30 +181,87 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
   }
 
   Widget _buildContent() {
+    final buttonSize = _isTablet(context) ? 52.0 : 44.0;
+    final iconSize = _isTablet(context) ? 22.0 : 18.0;
+
     return FadeTransition(
-      opacity: _controller.fadeAnimation,
+      opacity: _fadeAnimation,
       child: CustomScrollView(
         controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         slivers: [
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          // FIXED: The header is now a SliverAppBar which stays at the top.
+          SliverAppBar(
+            pinned: true,
+            backgroundColor: surfacePrimary,
+            elevation: 0,
+            centerTitle: true,
+            automaticallyImplyLeading: false, // Use our custom back button
+            leadingWidth: buttonSize + _getHorizontalPadding(context),
+            leading: Center(
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  width: buttonSize,
+                  height: buttonSize,
+                  decoration: BoxDecoration(
+                    color: surfaceSecondary,
+                    borderRadius: BorderRadius.circular(
+                      _isTablet(context) ? 16 : 12,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: textPrimary,
+                    size: iconSize,
+                  ),
+                ),
+              ),
+            ),
+            title: Text(
+              'Activity',
+              style: TextStyle(
+                fontSize: _isTablet(context) ? 22 : 18,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            actions: [
+              SizedBox(width: buttonSize + _getHorizontalPadding(context)),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(height: _isTablet(context) ? 12 : 8),
+          ),
           SliverToBoxAdapter(child: _buildCurrentStatusSection()),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-          _buildSectionSliver('The Lineup', _buildActiveQueueSection()),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-          _buildSectionSliver('Active Hangouts', _buildActiveMatchesSection()),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-          _buildSectionSliver('Past Hangouts', _buildRecentMatchesSection()),
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
+          SliverToBoxAdapter(
+            child: SizedBox(height: _isTablet(context) ? 48 : 40),
+          ),
+          _buildSectionSliver('Queue', _buildActiveQueueSection()),
+          SliverToBoxAdapter(
+            child: SizedBox(height: _isTablet(context) ? 40 : 32),
+          ),
+          _buildSectionSliver('Active', _buildActiveMatchesSection()),
+          SliverToBoxAdapter(
+            child: SizedBox(height: _isTablet(context) ? 40 : 32),
+          ),
+          _buildSectionSliver('Recent', _buildRecentMatchesSection()),
+          SliverToBoxAdapter(
+            child: SizedBox(height: _isTablet(context) ? 120 : 100),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSectionSliver(String title, Widget content) {
-    final horizontalPadding = _getResponsivePadding(
-      MediaQuery.of(context).size.width,
-    );
+    final horizontalPadding = _getHorizontalPadding(context);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -166,21 +270,27 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 12, bottom: 12),
+              padding: EdgeInsets.only(
+                left: _isTablet(context) ? 6 : 4,
+                bottom: _isTablet(context) ? 16 : 12,
+              ),
               child: Text(
-                title.toUpperCase(),
-                style: const TextStyle(
+                title,
+                style: TextStyle(
                   color: textSecondary,
-                  fontSize: 13,
+                  fontSize: _isTablet(context) ? 15 : 13,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.2,
                 ),
               ),
             ),
             Container(
               decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(12),
+                color: surfaceSecondary,
+                borderRadius: BorderRadius.circular(
+                  _isTablet(context) ? 20 : 16,
+                ),
+                border: Border.all(color: strokeLight, width: 0.5),
               ),
               child: content,
             ),
@@ -190,16 +300,11 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     );
   }
 
-  double _getResponsivePadding(double screenWidth) {
-    if (screenWidth > 600) return 40;
-    return 16;
-  }
-
   Widget _buildCurrentStatusSection() {
     if (_controller.user == null) return const SizedBox.shrink();
-    final horizontalPadding = _getResponsivePadding(
-      MediaQuery.of(context).size.width,
-    );
+
+    final horizontalPadding = _getHorizontalPadding(context);
+    final cardHeight = _isTablet(context) ? 220.0 : 180.0;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
@@ -210,13 +315,28 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
             stream: _controller.activeMatchStream,
             builder: (context, matchSnapshot) {
               if (matchSnapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(
-                  height: 200,
+                return Container(
+                  height: cardHeight,
+                  decoration: BoxDecoration(
+                    color: surfaceSecondary,
+                    borderRadius: BorderRadius.circular(
+                      _isTablet(context) ? 24 : 20,
+                    ),
+                    border: Border.all(color: strokeLight, width: 0.5),
+                  ),
                   child: Center(
-                    child: CircularProgressIndicator(color: primaryRed),
+                    child: SizedBox(
+                      width: _isTablet(context) ? 28 : 24,
+                      height: _isTablet(context) ? 28 : 24,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(primaryAction),
+                      ),
+                    ),
                   ),
                 );
               }
+
               if (matchSnapshot.hasData &&
                   matchSnapshot.data!.docs.isNotEmpty) {
                 final matchDoc = matchSnapshot.data!.docs.first;
@@ -225,12 +345,14 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
                   matchDoc.id,
                 );
               }
+
               if (queueSnapshot.hasData &&
                   queueSnapshot.data!.docs.isNotEmpty) {
                 return _buildSearchingCard(
                   queueSnapshot.data!.docs.first.data() as Map<String, dynamic>,
                 );
               }
+
               return _buildIdleCard();
             },
           );
@@ -241,51 +363,76 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
 
   Widget _buildSearchingCard(Map<String, dynamic> data) {
     final timeSlot = data['timeSlot'] ?? 'Unknown';
+    final cardPadding = _getCardPadding(context);
+    final iconSize = _isTablet(context) ? 80.0 : 64.0;
+    final iconInnerSize = _isTablet(context) ? 34.0 : 28.0;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor, width: 1.5),
+        color: surfaceSecondary,
+        borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+        border: Border.all(color: strokeLight, width: 0.5),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            "Finding your Sidekicker...",
-            style: TextStyle(
-              color: textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(
+              color: primaryAction.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+            ),
+            child: Icon(
+              Icons.search_rounded,
+              color: primaryAction,
+              size: iconInnerSize,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: _isTablet(context) ? 28 : 24),
           Text(
-            "For the $timeSlot hangout. Stay tuned!",
-            style: const TextStyle(
+            'Searching',
+            style: TextStyle(
+              color: textPrimary,
+              fontSize: _isTablet(context) ? 28 : 24,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+            ),
+          ),
+          SizedBox(height: _isTablet(context) ? 12 : 8),
+          Text(
+            'Looking for someone to join $timeSlot',
+            style: TextStyle(
               color: textSecondary,
-              fontSize: 16,
-              height: 1.4,
+              fontSize: _isTablet(context) ? 18 : 16,
+              fontWeight: FontWeight.w400,
+              letterSpacing: -0.1,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-          AnimatedBuilder(
-            animation: _controller.pulseController,
-            builder: (context, child) {
-              return Opacity(
-                opacity: (_controller.pulseController.value * 0.5) + 0.5,
-                child: child,
-              );
-            },
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: const LinearProgressIndicator(
-                valueColor: AlwaysStoppedAnimation(primaryRed),
-                backgroundColor: secondaryCardColor,
-                minHeight: 6,
-              ),
+          SizedBox(height: _isTablet(context) ? 40 : 32),
+          Container(
+            height: _isTablet(context) ? 5 : 4,
+            decoration: BoxDecoration(
+              color: strokeLight,
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 2.5 : 2),
+            ),
+            child: AnimatedBuilder(
+              animation: _controller.pulseController,
+              builder: (context, child) {
+                return FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: (_controller.pulseController.value * 0.6) + 0.2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: primaryAction,
+                      borderRadius: BorderRadius.circular(
+                        _isTablet(context) ? 2.5 : 2,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -299,92 +446,148 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
       data['users'] ?? [],
     )).firstWhere((id) => id != _controller.user?.uid, orElse: () => '');
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20.0),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: cardColor.withOpacity(0.75),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: borderColor, width: 1.5),
+    final cardPadding = _getCardPadding(context);
+    final iconSize = _isTablet(context) ? 80.0 : 64.0;
+    final iconInnerSize = _isTablet(context) ? 34.0 : 28.0;
+
+    return Container(
+      padding: EdgeInsets.all(cardPadding),
+      decoration: BoxDecoration(
+        color: surfaceSecondary,
+        borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+        border: Border.all(color: strokeLight, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(
+              color: successColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+            ),
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: successColor,
+              size: iconInnerSize,
+            ),
           ),
-          child: Column(
-            children: [
-              const Text(
-                "It's a Vibe!",
-                style: TextStyle(
-                  color: successColor,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              FutureBuilder<DocumentSnapshot>(
-                future: _controller.getUserDetails(otherUserId),
-                builder: (context, snapshot) {
-                  String matchText = "You've got a match!";
-                  if (snapshot.hasData && snapshot.data!.exists) {
-                    final userData =
-                        snapshot.data!.data() as Map<String, dynamic>;
-                    final userName = userData['displayName'] ?? 'Someone';
-                    matchText = "You're meeting ${userName}!";
-                  } else if (snapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    matchText = "Loading your match...";
-                  }
-                  return Text(
+          SizedBox(height: _isTablet(context) ? 28 : 24),
+          FutureBuilder<DocumentSnapshot>(
+            future: _controller.getUserDetails(otherUserId),
+            builder: (context, snapshot) {
+              String matchText = 'Connected';
+              String subtitle = 'You have a new match';
+
+              if (snapshot.hasData && snapshot.data!.exists) {
+                final userData = snapshot.data!.data() as Map<String, dynamic>;
+                final userName = userData['displayName'] ?? 'Someone';
+                final truncatedName = _truncateName(userName, maxLength: 15);
+                matchText = 'Meeting $truncatedName';
+                subtitle = 'Your connection is ready';
+              }
+
+              return Column(
+                children: [
+                  Text(
                     matchText,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: textPrimary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                      fontSize: _isTablet(context) ? 28 : 24,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.3,
                     ),
-                  );
-                },
+                  ),
+                  SizedBox(height: _isTablet(context) ? 12 : 8),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: textSecondary,
+                      fontSize: _isTablet(context) ? 18 : 16,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: _isTablet(context) ? 40 : 32),
+          _buildInfoRow(Icons.location_on_outlined, meetupLocation),
+          SizedBox(height: _isTablet(context) ? 16 : 12),
+          _buildInfoRow(Icons.schedule_outlined, 'Active now'),
+          SizedBox(height: _isTablet(context) ? 40 : 32),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPrimaryButton(
+                  'Chat',
+                  Icons.chat_bubble_outline_rounded,
+                  () => _navigateToChat(matchId, otherUserId),
+                ),
               ),
-              const SizedBox(height: 24),
-              _buildInfoRow(Icons.location_on_rounded, meetupLocation),
-              const SizedBox(height: 10),
-              _buildInfoRow(Icons.access_time_filled_rounded, "Happening Now"),
-              const SizedBox(height: 24),
-              _buildCancelButton(
-                onPressed: () => _controller.cancelMatch(matchId),
+              SizedBox(width: _isTablet(context) ? 16 : 12),
+              Expanded(
+                child: _buildSecondaryButton(
+                  'Cancel',
+                  () => _controller.cancelMatch(matchId),
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildIdleCard() {
+    final cardPadding = _getCardPadding(context);
+    final iconSize = _isTablet(context) ? 80.0 : 64.0;
+    final iconInnerSize = _isTablet(context) ? 34.0 : 28.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
+        color: surfaceSecondary,
+        borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+        border: Border.all(color: strokeLight, width: 0.5),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.emoji_people_rounded, color: textSecondary, size: 48),
-          SizedBox(height: 16),
-          Text(
-            "Ready to Hangout?",
-            style: TextStyle(
-              color: textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(
+              color: strokeLight,
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 24 : 20),
+            ),
+            child: Icon(
+              Icons.people_outline_rounded,
+              color: textTertiary,
+              size: iconInnerSize,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: _isTablet(context) ? 28 : 24),
           Text(
-            "Jump into The Lineup to meet new people on campus.",
+            'Ready to connect?',
+            style: TextStyle(
+              color: textPrimary,
+              fontSize: _isTablet(context) ? 28 : 24,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+            ),
+          ),
+          SizedBox(height: _isTablet(context) ? 12 : 8),
+          Text(
+            'Join the queue to meet new people on campus',
             textAlign: TextAlign.center,
-            style: TextStyle(color: textSecondary, fontSize: 16, height: 1.4),
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: _isTablet(context) ? 18 : 16,
+              fontWeight: FontWeight.w400,
+              letterSpacing: -0.1,
+            ),
           ),
         ],
       ),
@@ -396,8 +599,9 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
       stream: _controller.activeQueueStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyListItem('No active lineups');
+          return _buildEmptyState('No active queues');
         }
+
         return ListView.separated(
           itemCount: snapshot.data!.docs.length,
           shrinkWrap: true,
@@ -405,12 +609,13 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           padding: EdgeInsets.zero,
           separatorBuilder: (context, index) => Divider(
             height: 1,
-            color: borderColor.withOpacity(0.7),
-            indent: 56,
+            color: strokeLight,
+            indent: _isTablet(context) ? 72 : 60,
+            endIndent: _isTablet(context) ? 24 : 20,
           ),
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
-            return _buildQueueCard(doc.data() as Map<String, dynamic>, doc.id);
+            return _buildQueueItem(doc.data() as Map<String, dynamic>, doc.id);
           },
         );
       },
@@ -422,8 +627,9 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
       stream: _controller.allActiveMatchesStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyListItem('No active hangouts');
+          return _buildEmptyState('No active matches');
         }
+
         return ListView.separated(
           itemCount: snapshot.data!.docs.length,
           shrinkWrap: true,
@@ -431,12 +637,13 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           physics: const NeverScrollableScrollPhysics(),
           separatorBuilder: (context, index) => Divider(
             height: 1,
-            color: borderColor.withOpacity(0.7),
-            indent: 56,
+            color: strokeLight,
+            indent: _isTablet(context) ? 72 : 60,
+            endIndent: _isTablet(context) ? 24 : 20,
           ),
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
-            return _buildMatchCard(doc.data() as Map<String, dynamic>, doc.id);
+            return _buildMatchItem(doc.data() as Map<String, dynamic>, doc.id);
           },
         );
       },
@@ -448,8 +655,9 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
       stream: _controller.recentMatchesStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyListItem('No past hangouts yet');
+          return _buildEmptyState('No recent activity');
         }
+
         return ListView.separated(
           itemCount: snapshot.data!.docs.length,
           shrinkWrap: true,
@@ -457,84 +665,100 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           physics: const NeverScrollableScrollPhysics(),
           separatorBuilder: (context, index) => Divider(
             height: 1,
-            color: borderColor.withOpacity(0.7),
-            indent: 56,
+            color: strokeLight,
+            indent: _isTablet(context) ? 72 : 60,
+            endIndent: _isTablet(context) ? 24 : 20,
           ),
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
-            return _buildMatchCard(doc.data() as Map<String, dynamic>, doc.id);
+            return _buildMatchItem(doc.data() as Map<String, dynamic>, doc.id);
           },
         );
       },
     );
   }
 
-  Widget _buildQueueCard(Map<String, dynamic> data, String docId) {
+  Widget _buildQueueItem(Map<String, dynamic> data, String docId) {
     final timeSlot = data['timeSlot'] ?? 'Unknown';
     final joinedAt =
         (data['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Row(
-            children: [
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.hourglass_bottom_rounded,
-                color: primaryRed,
-                size: 24,
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      timeSlot,
-                      style: const TextStyle(
-                        color: textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Joined ${_controller.getTimeAgo(joinedAt)}",
-                      style: const TextStyle(
-                        color: textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _controller.cancelQueue(docId);
-                },
-                child: const Text(
-                  'Cancel',
+    final horizontalPadding = _getHorizontalPadding(context);
+    final iconSize = _isTablet(context) ? 48.0 : 40.0;
+    final iconInnerSize = _isTablet(context) ? 24.0 : 20.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: _isTablet(context) ? 20 : 16,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(
+              color: warningColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 16 : 12),
+            ),
+            child: Icon(
+              Icons.schedule_outlined,
+              color: warningColor,
+              size: iconInnerSize,
+            ),
+          ),
+          SizedBox(width: _isTablet(context) ? 20 : 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  timeSlot,
                   style: TextStyle(
-                    color: primaryRed,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                    fontSize: _isTablet(context) ? 18 : 16,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.1,
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-            ],
+                SizedBox(height: _isTablet(context) ? 4 : 2),
+                Text(
+                  'Joined ${_controller.getTimeAgo(joinedAt)}',
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: _isTablet(context) ? 16 : 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              _controller.cancelQueue(docId);
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: _isTablet(context) ? 16 : 12,
+                vertical: _isTablet(context) ? 8 : 6,
+              ),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: criticalColor,
+                  fontSize: _isTablet(context) ? 17 : 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMatchCard(Map<String, dynamic> data, String docId) {
+  Widget _buildMatchItem(Map<String, dynamic> data, String docId) {
     final status = data['status'] ?? 'unknown';
     final otherUserId = (List<String>.from(
       data['users'] ?? [],
@@ -542,62 +766,83 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     final matchedAt =
         (data['matchedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
-    IconData statusIconData;
-    Color statusIconColor;
+    IconData iconData;
+    Color iconColor;
+    Color backgroundColor;
 
     switch (status) {
       case 'active':
-        statusIconData = Icons.circle;
-        statusIconColor = successColor;
+        iconData = Icons.chat_bubble_outline_rounded;
+        iconColor = successColor;
+        backgroundColor = successColor.withOpacity(0.1);
         break;
       case 'completed':
-        statusIconData = Icons.check_circle_rounded;
-        statusIconColor = textTertiary;
+        iconData = Icons.check_circle_outline_rounded;
+        iconColor = textTertiary;
+        backgroundColor = strokeLight;
         break;
       case 'cancelled':
-        statusIconData = Icons.cancel_rounded;
-        statusIconColor = warningColor;
+        iconData = Icons.cancel_outlined;
+        iconColor = criticalColor;
+        backgroundColor = criticalColor.withOpacity(0.1);
         break;
       default:
-        statusIconData = Icons.help_outline_rounded;
-        statusIconColor = textTertiary;
+        iconData = Icons.help_outline_rounded;
+        iconColor = textTertiary;
+        backgroundColor = strokeLight;
     }
 
+    final horizontalPadding = _getHorizontalPadding(context);
+    final iconSize = _isTablet(context) ? 48.0 : 40.0;
+    final iconInnerSize = _isTablet(context) ? 24.0 : 20.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: _isTablet(context) ? 20 : 16,
+      ),
       child: Row(
         children: [
-          const SizedBox(width: 4),
-          Icon(statusIconData, color: statusIconColor, size: 24),
-          const SizedBox(width: 20),
+          Container(
+            width: iconSize,
+            height: iconSize,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(_isTablet(context) ? 16 : 12),
+            ),
+            child: Icon(iconData, color: iconColor, size: iconInnerSize),
+          ),
+          SizedBox(width: _isTablet(context) ? 20 : 16),
           Expanded(
             child: FutureBuilder<DocumentSnapshot>(
               future: _controller.getUserDetails(otherUserId),
               builder: (context, snapshot) {
-                String title = 'A Sidekicker';
+                String title = 'Someone';
                 if (snapshot.hasData && snapshot.data!.exists) {
-                  title =
-                      (snapshot.data!.data()
-                          as Map<String, dynamic>)['displayName'] ??
-                      'A Sidekicker';
+                  final userData =
+                      snapshot.data!.data() as Map<String, dynamic>;
+                  title = _truncateName(userData['displayName'] ?? 'Someone');
                 }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: _isTablet(context) ? 18 : 16,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: _isTablet(context) ? 4 : 2),
                     Text(
                       _controller.getTimeAgo(matchedAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: textSecondary,
-                        fontSize: 14,
+                        fontSize: _isTablet(context) ? 16 : 14,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
@@ -605,34 +850,71 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
               },
             ),
           ),
-          if (status == 'active')
+          if (status == 'active') ...[
             GestureDetector(
               onTap: () {
-                HapticFeedback.lightImpact();
-                _controller.cancelMatch(docId);
+                HapticFeedback.selectionClick();
+                _navigateToChat(docId, otherUserId);
               },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: primaryRed,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isTablet(context) ? 20 : 16,
+                  vertical: _isTablet(context) ? 12 : 8,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryAction,
+                  borderRadius: BorderRadius.circular(
+                    _isTablet(context) ? 10 : 8,
+                  ),
+                ),
+                child: Text(
+                  'Chat',
+                  style: TextStyle(
+                    color: surfacePrimary,
+                    fontSize: _isTablet(context) ? 16 : 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
-          const SizedBox(width: 4),
+            SizedBox(width: _isTablet(context) ? 12 : 8),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _controller.cancelMatch(docId);
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isTablet(context) ? 16 : 12,
+                  vertical: _isTablet(context) ? 8 : 6,
+                ),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: criticalColor,
+                    fontSize: _isTablet(context) ? 16 : 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildEmptyListItem(String text) {
+  Widget _buildEmptyState(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      padding: EdgeInsets.symmetric(vertical: _isTablet(context) ? 40 : 32),
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(color: textSecondary, fontSize: 15),
+          style: TextStyle(
+            color: textTertiary,
+            fontSize: _isTablet(context) ? 17 : 15,
+            fontWeight: FontWeight.w400,
+          ),
         ),
       ),
     );
@@ -642,41 +924,84 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: textSecondary, size: 18),
-        const SizedBox(width: 10),
+        Icon(icon, color: textSecondary, size: _isTablet(context) ? 22 : 18),
+        SizedBox(width: _isTablet(context) ? 12 : 8),
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             color: textSecondary,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontSize: _isTablet(context) ? 17 : 15,
+            fontWeight: FontWeight.w400,
+            letterSpacing: -0.1,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCancelButton({required VoidCallback onPressed}) {
-    return SizedBox(
-      width: double.infinity,
-      child: TextButton(
-        style: TextButton.styleFrom(
-          backgroundColor: secondaryCardColor,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+  Widget _buildPrimaryButton(
+    String text,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
+    final buttonHeight = _isTablet(context) ? 56.0 : 48.0;
+    final iconSize = _isTablet(context) ? 22.0 : 18.0;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onPressed();
+      },
+      child: Container(
+        height: buttonHeight,
+        decoration: BoxDecoration(
+          color: primaryAction,
+          borderRadius: BorderRadius.circular(_isTablet(context) ? 16 : 12),
         ),
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          onPressed();
-        },
-        child: const Text(
-          'Cancel Hangout',
-          style: TextStyle(
-            color: primaryRed,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: surfacePrimary, size: iconSize),
+            SizedBox(width: _isTablet(context) ? 12 : 8),
+            Text(
+              text,
+              style: TextStyle(
+                color: surfacePrimary,
+                fontSize: _isTablet(context) ? 18 : 16,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecondaryButton(String text, VoidCallback onPressed) {
+    final buttonHeight = _isTablet(context) ? 56.0 : 48.0;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onPressed();
+      },
+      child: Container(
+        height: buttonHeight,
+        decoration: BoxDecoration(
+          color: surfaceTertiary,
+          borderRadius: BorderRadius.circular(_isTablet(context) ? 16 : 12),
+          border: Border.all(color: strokeLight, width: 0.5),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: textPrimary,
+              fontSize: _isTablet(context) ? 18 : 16,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.1,
+            ),
           ),
         ),
       ),
@@ -684,37 +1009,43 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
   }
 }
 
-// --- CUSTOM PAINTER FOR THE NEW LOADING ANIMATION ---
-class _RadarPainter extends CustomPainter {
+class _MinimalLoadingPainter extends CustomPainter {
   final double animationValue;
 
-  _RadarPainter(this.animationValue);
+  _MinimalLoadingPainter(this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = size.width / 2;
+    final radius = size.width / 2 - 8;
 
-    // We draw 3 circles with different animation offsets for the sonar effect
-    for (int i = 0; i < 3; i++) {
-      final tick = (animationValue + (i * 0.33)) % 1.0;
-      final radius = maxRadius * Curves.easeOut.transform(tick);
-      final opacity = (1.0 - tick) * 0.7; // Fade out as it expands
+    // Single elegant loading ring with red accent
+    final paint = Paint()
+      ..color = _MatchProgressScreenState.primaryAction
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
 
-      final paint = Paint()
-        ..color = _MatchProgressScreenState.primaryRed.withOpacity(opacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
+    const startAngle = -1.57; // Start from top
+    final sweepAngle = 1.57 * animationValue; // Quarter circle sweep
 
-      if (opacity > 0) {
-        // Only draw if visible
-        canvas.drawCircle(center, radius, paint);
-      }
-    }
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      paint,
+    );
+
+    // Subtle background ring
+    final backgroundPaint = Paint()
+      ..color = _MatchProgressScreenState.strokeLight
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true; // Repaint on every frame
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

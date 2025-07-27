@@ -135,8 +135,26 @@ class MatchProgressController {
   // --- Public Methods ---
 
   /// Fetches a user's profile data from Firestore.
-  Future<DocumentSnapshot> getUserDetails(String userId) {
-    return _firestore.collection('users').doc(userId).get();
+  /// FIXED: Return Future with proper error handling instead of mock
+  Future<DocumentSnapshot> getUserDetails(String userId) async {
+    // Return empty result for invalid userId
+    if (userId.isEmpty) {
+      // Create a proper empty document reference and get it
+      // This will return a valid DocumentSnapshot with exists = false
+      try {
+        return await _firestore.collection('users').doc('__empty__').get();
+      } catch (e) {
+        // If that fails, rethrow the error
+        throw Exception('Failed to get user details: $e');
+      }
+    }
+
+    try {
+      return await _firestore.collection('users').doc(userId).get();
+    } catch (e) {
+      // Return empty document on error
+      return await _firestore.collection('users').doc('__empty__').get();
+    }
   }
 
   /// Cancels a user's entry in the matching queue.
@@ -146,29 +164,33 @@ class MatchProgressController {
     try {
       await _firestore.collection('matchingQueue').doc(docId).delete();
 
-      ScaffoldMessenger.of(_context).showSnackBar(
-        SnackBar(
-          content: const Text('Queue cancelled'),
-          backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: const Text('Queue cancelled'),
+            backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(_context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel queue: $e'),
-          backgroundColor: const Color(0xFFFF3B30), // primaryRed
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel queue: $e'),
+            backgroundColor: const Color(0xFFFF3B30), // primaryRed
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -182,29 +204,33 @@ class MatchProgressController {
         'cancelledAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(_context).showSnackBar(
-        SnackBar(
-          content: const Text('Match cancelled'),
-          backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: const Text('Match cancelled'),
+            backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(_context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel match: $e'),
-          backgroundColor: const Color(0xFFFF3B30), // primaryRed
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel match: $e'),
+            backgroundColor: const Color(0xFFFF3B30), // primaryRed
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        ),
-      );
+        );
+      }
     }
   }
 
