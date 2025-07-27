@@ -21,7 +21,7 @@ enum CategoryFilter {
 enum SortOption {
   recent('🕒 Recent'),
   mostLiked('❤️ Most Liked'),
-  mostCommented('💬 Most Commented');
+  mostCommented('Most Commented'); // Removed emoji
 
   const SortOption(this.displayName);
   final String displayName;

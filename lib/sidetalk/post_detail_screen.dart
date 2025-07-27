@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'dart:math';
 import '../models/post.dart';
 import '../models/comment.dart';
 import '../core/services/comment_service.dart';
@@ -214,9 +213,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Text(
-                                      '❤️',
-                                      style: TextStyle(fontSize: 16),
+                                    Icon(
+                                      Icons.favorite,
+                                      color: Colors.red,
+                                      size: 16,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -232,9 +232,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 const SizedBox(width: 20),
                                 Row(
                                   children: [
-                                    const Text(
-                                      '💬',
-                                      style: TextStyle(fontSize: 16),
+                                    Icon(
+                                      Icons.comment_outlined,
+                                      color: Colors.grey[400],
+                                      size: 16,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -289,9 +290,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Row(
                                   children: [
-                                    const Text(
-                                      '💬',
-                                      style: TextStyle(fontSize: 18),
+                                    Icon(
+                                      Icons.comment_outlined,
+                                      color: Colors.grey[400],
+                                      size: 18,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
@@ -369,14 +371,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       color: Colors.white,
                       fontSize: 14,
                     ),
-                    decoration: const InputDecoration(
-                      hintText: '💬 Add a comment…', // Added emoji to placeholder
-                      hintStyle: TextStyle(
+                    decoration: InputDecoration(
+                      hintText: 'Add a comment…', // Removed emoji from placeholder
+                      hintStyle: const TextStyle(
                         color: Color(0xFF666666),
                         fontSize: 14,
                       ),
+                      prefixIcon: Icon(
+                        Icons.comment_outlined,
+                        color: Colors.grey[600],
+                        size: 18,
+                      ),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12), // Improved padding
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12), // Improved padding
                     ),
                     maxLines: null,
                   ),
@@ -416,50 +423,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildAvatar() {
     if (widget.post.isAnonymous) {
-      // For anonymous posts, randomly choose male or female avatar
-      final random = Random(widget.post.id.hashCode); // Use post ID as seed for consistency
-      final isMale = random.nextBool();
-      
-      // Choose a random avatar from the appropriate gender folder
-      if (isMale) {
-        final maleAvatarIndex = random.nextInt(5) + 1; // 1-5
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFF333333),
-            borderRadius: BorderRadius.circular(16),
+      // For anonymous posts, use the single SVG avatar with grey background
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.grey[600], // Grey background for the SVG
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(4), // Reduced padding to make SVG bigger
+          child: SvgPicture.asset(
+            'assets/avatar/anon_user.svg',
+            width: 24, // Increased from 20 to 24
+            height: 24, // Increased from 20 to 24
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Make SVG white
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SvgPicture.asset(
-              'assets/avatar/anon_logos/male/male_$maleAvatarIndex.svg',
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      } else {
-        final femaleAvatarIndex = random.nextInt(6) + 1; // 1-6
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFF333333),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SvgPicture.asset(
-              'assets/avatar/anon_logos/female/female_$femaleAvatarIndex.svg',
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      }
+        ),
+      );
     } else {
       String displayText = widget.post.username != null 
           ? widget.post.username!.length >= 2 
@@ -567,18 +548,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   // Helper method to build comment avatars
   Widget _buildCommentAvatar(Comment comment) {
     if (comment.isAnonymous) {
-      // For anonymous comments, use a simple emoji or icon
+      // For anonymous comments, use the same SVG avatar with grey background
       return Container(
         width: 20,
         height: 20,
         decoration: BoxDecoration(
-          color: const Color(0xFF444444),
+          color: Colors.grey[600], // Grey background for the SVG
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Center(
-          child: Text(
-            '👤',
-            style: TextStyle(fontSize: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(2), // Reduced padding to make SVG bigger
+          child: SvgPicture.asset(
+            'assets/avatar/anon_user.svg',
+            width: 16, // Increased from 14 to 16
+            height: 16, // Increased from 14 to 16
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Make SVG white
           ),
         ),
       );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'dart:math';
 import '../models/post.dart';
 import 'post_detail_screen.dart';
 
@@ -31,50 +30,24 @@ class _PostCardState extends State<PostCard> {
   // Get avatar widget for different post types
   Widget _buildAvatar() {
     if (widget.post.isAnonymous) {
-      // For anonymous posts, randomly choose male or female avatar
-      final random = Random(widget.post.id.hashCode); // Use post ID as seed for consistency
-      final isMale = random.nextBool();
-      
-      // Choose a random avatar from the appropriate gender folder
-      if (isMale) {
-        final maleAvatarIndex = random.nextInt(5) + 1; // 1-5
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFF333333),
-            borderRadius: BorderRadius.circular(16),
+      // For anonymous posts, use the single SVG avatar with grey background
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.grey[600], // Grey background for the SVG
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(4), // Reduced padding to make SVG bigger
+          child: SvgPicture.asset(
+            'assets/avatar/anon_user.svg',
+            width: 24, // Increased from 20 to 24
+            height: 24, // Increased from 20 to 24
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Make SVG white
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SvgPicture.asset(
-              'assets/avatar/anon_logos/male/male_$maleAvatarIndex.svg',
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      } else {
-        final femaleAvatarIndex = random.nextInt(6) + 1; // 1-6
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFF333333),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SvgPicture.asset(
-              'assets/avatar/anon_logos/female/female_$femaleAvatarIndex.svg',
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      }
+        ),
+      );
     } else {
       // For public posts, show red circle with initials or number
       String displayText = widget.post.username != null 
@@ -209,7 +182,8 @@ class _PostCardState extends State<PostCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ActionButton(
-                    icon: widget.likedByMe ? '❤️' : '🤍',
+                    icon: widget.likedByMe ? Icons.favorite : Icons.favorite_border,
+                    iconColor: widget.likedByMe ? Colors.red : Colors.grey[400],
                     count: widget.post.likes,
                     onTap: () {
                       if (widget.onLike != null) {
@@ -217,9 +191,10 @@ class _PostCardState extends State<PostCard> {
                       }
                     },
                   ),
-                  const SizedBox(width: 12), // Reduced spacing to save space
+                  const SizedBox(width: 16), // Increased spacing between like and comment
                   _ActionButton(
-                    icon: '💬',
+                    icon: Icons.comment_outlined,
+                    iconColor: Colors.grey[400],
                     count: widget.post.comments,
                     onTap: () {
                       Navigator.push(
@@ -246,9 +221,10 @@ class _PostCardState extends State<PostCard> {
                       );
                     },
                   ),
-                  const SizedBox(width: 12), // Reduced spacing to save space
+                  const SizedBox(width: 24), // Much larger spacing before report button
                   _ActionButton(
-                    icon: '🚩',
+                    icon: Icons.flag_outlined,
+                    iconColor: Colors.grey[400],
                     onTap: widget.onReport ?? () {},
                   ),
                 ],
@@ -281,12 +257,14 @@ class _PostCardState extends State<PostCard> {
 }
 
 class _ActionButton extends StatelessWidget {
-  final String icon;
+  final dynamic icon; // Can be either String (emoji) or IconData
+  final Color? iconColor;
   final int? count;
   final VoidCallback onTap;
 
   const _ActionButton({
     required this.icon,
+    this.iconColor,
     this.count,
     required this.onTap,
   });
@@ -298,12 +276,18 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            icon,
-            style: const TextStyle(
-              fontSize: 14, // font-size: 14px as specified
-            ),
-          ),
+          icon is IconData
+              ? Icon(
+                  icon as IconData,
+                  size: 16,
+                  color: iconColor ?? Colors.grey[400],
+                )
+              : Text(
+                  icon as String,
+                  style: const TextStyle(
+                    fontSize: 14, // font-size: 14px as specified
+                  ),
+                ),
           if (count != null) ...[
             const SizedBox(width: 4),
             Text(
