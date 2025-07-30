@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-// This will be your logic file.
 import './match_progress_logic.dart';
+import '../chat/chat_screen.dart'; // Import for the new chat screen
 
 class MatchProgressScreen extends StatefulWidget {
   const MatchProgressScreen({super.key});
@@ -103,25 +102,48 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     return width; // Use full width for smaller screens
   }
 
-  void _navigateToChat(String matchId, String otherUserId) {
+  Future<void> _navigateToChat(String matchId, String otherUserId) async {
     HapticFeedback.selectionClick();
-    // TODO: Replace with actual chat navigation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Opening chat...',
-          style: TextStyle(
-            color: textPrimary,
-            fontSize: _isTablet(context) ? 16 : 15,
-            fontWeight: FontWeight.w500,
+
+    try {
+      // Get match details to retrieve meeting time
+      final matchDoc = await FirebaseFirestore.instance
+          .collection('matches')
+          .doc(matchId)
+          .get();
+
+      if (!matchDoc.exists) {
+        _showErrorSnackBar('Match not found');
+        return;
+      }
+
+      final matchData = matchDoc.data() as Map<String, dynamic>;
+      final timeSlot = matchData['timeSlot'] ?? '12:00 PM';
+
+      // Navigate to the ChatScreen with the meeting time
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            matchId: matchId,
+            otherUserId: otherUserId,
+            meetingTime: timeSlot,
           ),
         ),
-        backgroundColor: surfaceSecondary,
+      );
+    } catch (e) {
+      _showErrorSnackBar('Failed to open chat');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: textPrimary)),
+        backgroundColor: criticalColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: EdgeInsets.all(_isTablet(context) ? 20 : 16),
-        elevation: 0,
-        duration: const Duration(milliseconds: 1200),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -192,7 +214,6 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
-          // FIXED: The header is now a SliverAppBar which stays at the top.
           SliverAppBar(
             pinned: true,
             backgroundColor: surfacePrimary,
@@ -442,6 +463,7 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
 
   Widget _buildActiveMatchCard(Map<String, dynamic> data, String matchId) {
     final meetupLocation = data['meetupLocation'] ?? 'Main Canteen';
+    final timeSlot = data['timeSlot'] ?? '12:00 PM';
     final otherUserId = (List<String>.from(
       data['users'] ?? [],
     )).firstWhere((id) => id != _controller.user?.uid, orElse: () => '');
@@ -516,7 +538,7 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           SizedBox(height: _isTablet(context) ? 40 : 32),
           _buildInfoRow(Icons.location_on_outlined, meetupLocation),
           SizedBox(height: _isTablet(context) ? 16 : 12),
-          _buildInfoRow(Icons.schedule_outlined, 'Active now'),
+          _buildInfoRow(Icons.schedule_outlined, 'Meeting at $timeSlot'),
           SizedBox(height: _isTablet(context) ? 40 : 32),
           Row(
             children: [
@@ -760,6 +782,7 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
 
   Widget _buildMatchItem(Map<String, dynamic> data, String docId) {
     final status = data['status'] ?? 'unknown';
+    final timeSlot = data['timeSlot'] ?? '12:00 PM';
     final otherUserId = (List<String>.from(
       data['users'] ?? [],
     )).firstWhere((id) => id != _controller.user?.uid, orElse: () => '');
@@ -782,6 +805,7 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
         backgroundColor = strokeLight;
         break;
       case 'cancelled':
+      case 'expired': // Handle expired status
         iconData = Icons.cancel_outlined;
         iconColor = criticalColor;
         backgroundColor = criticalColor.withOpacity(0.1);
@@ -852,10 +876,7 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
           ),
           if (status == 'active') ...[
             GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                _navigateToChat(docId, otherUserId);
-              },
+              onTap: () => _navigateToChat(docId, otherUserId),
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: _isTablet(context) ? 20 : 16,
@@ -1019,7 +1040,6 @@ class _MinimalLoadingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 8;
 
-    // Single elegant loading ring with red accent
     final paint = Paint()
       ..color = _MatchProgressScreenState.primaryAction
       ..style = PaintingStyle.stroke
@@ -1037,7 +1057,6 @@ class _MinimalLoadingPainter extends CustomPainter {
       paint,
     );
 
-    // Subtle background ring
     final backgroundPaint = Paint()
       ..color = _MatchProgressScreenState.strokeLight
       ..style = PaintingStyle.stroke

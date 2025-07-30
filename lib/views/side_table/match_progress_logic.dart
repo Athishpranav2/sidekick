@@ -116,6 +116,7 @@ class MatchProgressController {
   }
 
   /// Stream for recent matches (last 3 days) that are completed or cancelled.
+  /// UPDATED: Now limits to only 5 recent matches instead of 10
   Stream<QuerySnapshot> get recentMatchesStream {
     if (user == null) return Stream.empty();
     final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
@@ -128,7 +129,7 @@ class MatchProgressController {
         )
         .where('status', whereIn: ['completed', 'cancelled'])
         .orderBy('matchedAt', descending: true)
-        .limit(10)
+        .limit(5) // CHANGED: Reduced from 10 to 5
         .snapshots();
   }
 

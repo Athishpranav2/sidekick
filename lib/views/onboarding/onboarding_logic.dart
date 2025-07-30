@@ -1,8 +1,5 @@
-// Create this file: services/onboarding_logic.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/user_model.dart';
 
 class OnboardingLogic {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,6 +32,9 @@ class OnboardingLogic {
     '4th Year',
     '5th Year',
   ];
+
+  // Genders
+  static const List<String> genders = ['Male', 'Female'];
 
   // Check if username is available
   static Future<bool> isUsernameAvailable(String username) async {
@@ -133,6 +133,7 @@ class OnboardingLogic {
     required String username,
     required String department,
     required String year,
+    required String gender, // Added gender parameter
     String? displayName,
   }) async {
     final user = _auth.currentUser;
@@ -153,6 +154,7 @@ class OnboardingLogic {
         'photoURL': user.photoURL,
         'department': department,
         'year': year,
+        'gender': gender, // Storing gender in Firestore
         'onboardingCompleted': true,
         'createdAt': FieldValue.serverTimestamp(),
         'lastLoginAt': FieldValue.serverTimestamp(),

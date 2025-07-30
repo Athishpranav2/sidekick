@@ -1,6 +1,7 @@
 // FILE: views/side_table/time_selection_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart'; // Import for iOS-style switch
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
@@ -49,6 +50,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
   bool _isJoiningQueue = false;
   bool _isUserMatched = false; // New field to track if user is already matched
   bool _isLoadingStatus = true; // Track loading state
+  bool _matchOnlySameGender = false; // New state for the gender toggle
   late AnimationController _popupAnimationController;
   late AnimationController _scaleAnimationController;
   late Animation<double> _scaleAnimation;
@@ -453,6 +455,8 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
           'timeSlot': slot.time,
           'status': 'waiting',
           'createdAt': FieldValue.serverTimestamp(),
+          // ADDED: Include the gender matching preference in the queue data
+          'matchPreference': _matchOnlySameGender ? 'same_gender' : 'any',
         });
       }
 
@@ -532,11 +536,44 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
                       ],
                     ),
                   ),
+                  // ADDED: Gender preference toggle
+                  _buildGenderToggle(size),
                   _buildConfirmButton(size),
                   SizedBox(height: size.height * 0.05),
                 ],
               ),
             ),
+    );
+  }
+
+  // NEW WIDGET: For the gender preference toggle
+  Widget _buildGenderToggle(Size size) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: size.height * 0.02),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Match with my gender only',
+            style: TextStyle(
+              color: Colors.grey[300],
+              fontSize: size.width * 0.04,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          CupertinoSwitch(
+            value: _matchOnlySameGender,
+            onChanged: (value) {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _matchOnlySameGender = value;
+              });
+            },
+            activeColor: const Color(0xFFDC2626),
+            trackColor: const Color(0xFF2C2C2E),
+          ),
+        ],
+      ),
     );
   }
 

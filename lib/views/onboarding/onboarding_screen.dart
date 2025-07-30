@@ -1,15 +1,14 @@
-// Create this file: views/onboarding/onboarding_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../home/home_screen.dart';
 import '../../providers/user_provider.dart';
+// Make sure this import path is correct for your project structure
 import 'onboarding_logic.dart';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~ NEW REUSABLE WIDGET (Self-Contained) ~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~ REUSABLE WIDGET (Self-Contained) ~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class SearchableDropdown extends StatefulWidget {
@@ -263,6 +262,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   String? _selectedDepartment;
   String? _selectedYear;
+  String? _selectedGender; // Added state for gender
 
   // Username checking state
   bool _isCheckingUsername = false;
@@ -379,6 +379,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         username: _usernameController.text.trim(),
         department: _selectedDepartment!,
         year: _selectedYear!,
+        gender: _selectedGender!, // Pass the selected gender
         displayName: _displayNameController.text.trim().isNotEmpty
             ? _displayNameController.text.trim()
             : null,
@@ -493,6 +494,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         _showCustomSnackBar('Please choose an available username', false);
       }
     } else if (_currentPage == 3) {
+      // New gender page logic
+      if (_selectedGender != null) {
+        _navigateToPage(4);
+      } else {
+        _showCustomSnackBar('Please select your gender', false);
+      }
+    } else if (_currentPage == 4) {
+      // Final page
       if (_selectedDepartment != null && _selectedYear != null) {
         _completeOnboarding();
       } else {
@@ -547,6 +556,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Expanded(
                   child: PageView(
                     controller: _pageController,
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Prevent manual swipe
                     onPageChanged: (index) {
                       setState(() {
                         _currentPage = index;
@@ -556,6 +567,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       _buildWelcomePage(size, isTablet),
                       _buildNamePage(size, isTablet),
                       _buildUsernamePage(size, isTablet),
+                      _buildGenderPage(size, isTablet), // New page added
                       _buildDetailsPage(size, isTablet),
                     ],
                   ),
@@ -625,7 +637,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               borderRadius: BorderRadius.circular(size.width * 0.04),
             ),
             child: Text(
-              '${_currentPage + 1}/4',
+              '${_currentPage + 1}/5', // Updated page count
               style: TextStyle(
                 color: Colors.grey[400],
                 fontSize: size.width * 0.03,
@@ -647,7 +659,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 2:
         return 'Pick a username';
       case 3:
-        return 'Almost done!';
+        return 'What\'s your gender?'; // New header title
+      case 4:
+        return 'Almost done!'; // Page number shifted
       default:
         return 'Setup';
     }
@@ -662,7 +676,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 2:
         return 'Choose something unique';
       case 3:
-        return 'Tell us about your studies';
+        return 'This helps personalize your experience'; // New subtitle
+      case 4:
+        return 'Tell us about your studies'; // Page number shifted
       default:
         return 'Setting up your profile';
     }
@@ -676,14 +692,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(size.height * 0.0015),
       ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-        width: size.width * 0.9 * ((_currentPage + 1) / 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
-          borderRadius: BorderRadius.circular(size.height * 0.0015),
-        ),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            width:
+                size.width *
+                0.9 *
+                ((_currentPage + 1) / 5), // Updated page count
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626),
+              borderRadius: BorderRadius.circular(size.height * 0.0015),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -948,6 +971,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter a username';
                     }
+                    final error = OnboardingLogic.validateUsername(value);
+                    if (error != null) return error;
                     if (_usernameError != null) {
                       return _usernameError;
                     }
@@ -1043,6 +1068,100 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  // ~~~~~ NEW GENDER SELECTION PAGE ~~~~~
+  Widget _buildGenderPage(Size size, bool isTablet) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tell us your gender',
+                style: TextStyle(
+                  fontSize: size.width * (isTablet ? 0.055 : 0.07),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              SizedBox(height: size.height * 0.015),
+              Text(
+                'This helps in tailoring your app experience.',
+                style: TextStyle(
+                  fontSize: size.width * (isTablet ? 0.03 : 0.04),
+                  color: Colors.grey[400],
+                  letterSpacing: -0.2,
+                ),
+              ),
+              SizedBox(height: size.height * 0.08),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildGenderCard(size, 'Male', Icons.male_rounded),
+                  SizedBox(width: size.width * 0.05),
+                  _buildGenderCard(size, 'Female', Icons.female_rounded),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderCard(Size size, String gender, IconData icon) {
+    final bool isSelected = _selectedGender == gender;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedGender = gender;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: size.width * 0.35,
+        height: size.width * 0.35,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFDC2626).withOpacity(0.15)
+              : const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(size.width * 0.06),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFDC2626)
+                : const Color(0xFF2C2C2E),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: size.width * 0.12,
+              color: isSelected ? const Color(0xFFDC2626) : Colors.grey[400],
+            ),
+            SizedBox(height: size.height * 0.015),
+            Text(
+              gender,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[300],
+                fontSize: size.width * 0.045,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   Widget _buildDetailsPage(Size size, bool isTablet) {
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -1073,8 +1192,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
               SizedBox(height: size.height * 0.06),
-
-              // UPDATED: Using the new SearchableDropdown
               SearchableDropdown(
                 label: 'Department',
                 hint: 'Type or select your department',
@@ -1084,10 +1201,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   setState(() => _selectedDepartment = value);
                 },
               ),
-
               SizedBox(height: size.height * 0.03),
-
-              // UPDATED: Using the new SearchableDropdown
               SearchableDropdown(
                 label: 'Year of Study',
                 hint: 'Type or select your year',
@@ -1097,7 +1211,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   setState(() => _selectedYear = value);
                 },
               ),
-
               SizedBox(height: size.height * 0.04),
               Container(
                 padding: EdgeInsets.all(size.width * 0.05),
@@ -1232,7 +1345,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   if (!_isLoading) ...[
                     SizedBox(width: size.width * 0.02),
                     Icon(
-                      _currentPage == 3 ? Icons.check : Icons.arrow_forward,
+                      _currentPage == 4 ? Icons.check : Icons.arrow_forward,
                       color: Colors.white,
                       size: size.width * 0.05,
                     ),
@@ -1251,10 +1364,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 0:
         return 'Get Started';
       case 1:
-        return 'Continue';
       case 2:
-        return 'Next';
-      case 3:
+      case 3: // Updated button text logic
+        return 'Continue';
+      case 4:
         return 'Complete Setup';
       default:
         return 'Next';
