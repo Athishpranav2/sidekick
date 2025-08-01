@@ -177,6 +177,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
           TextFormField(
             controller: _controller,
             focusNode: _focusNode,
+            keyboardAppearance: Brightness.dark,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -809,6 +810,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 SizedBox(height: size.height * 0.06),
                 TextFormField(
                   controller: _displayNameController,
+                  keyboardAppearance: Brightness.dark,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: size.width * (isTablet ? 0.035 : 0.045),
@@ -897,6 +899,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 SizedBox(height: size.height * 0.06),
                 TextFormField(
                   controller: _usernameController,
+                  keyboardAppearance: Brightness.dark,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: size.width * (isTablet ? 0.035 : 0.045),

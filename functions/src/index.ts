@@ -1,4 +1,5 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
@@ -519,3 +520,89 @@ async function getRecentMatchesMap(userIds: string[]): Promise<Map<string, Set<s
     return recentMatchesMap;
   }
 }
+
+/**
+ * V2 Firebase Function: Automatically close matches 30 minutes after their scheduled meeting time
+ * Runs every minute to check for matches that should be closed
+ */
+export const autoCloseMatches = onSchedule(
+  {
+    schedule: "every 1 minutes",
+    region: "us-central1",
+    memory: "256MiB",
+    timeoutSeconds: 60,
+    maxInstances: 5,
+  },
+  async (event) => {
+    try {
+      const now = new Date();
+      logger.info(`🔍 Checking for matches that should be auto-closed...`);
+
+      // Get all active matches
+      const matchesSnapshot = await db.collection("matches")
+        .where("status", "==", "active")
+        .get();
+
+      if (matchesSnapshot.empty) {
+        logger.info(`✅ No active matches to check`);
+        return;
+      }
+
+      const batch = db.batch();
+      const closedMatches: Array<{matchId: string, users: string[], timeSlot: string}> = [];
+
+      matchesSnapshot.forEach((doc) => {
+        const matchData = doc.data();
+        const timeSlot = matchData.timeSlot;
+        
+        if (!timeSlot) {
+          logger.warn(`⚠️ Match ${doc.id} has no timeSlot, skipping`);
+          return;
+        }
+
+        // Calculate the scheduled meeting time for today
+        const meetingTime = parseTimeSlot(timeSlot);
+        
+        // Calculate closure time (30 minutes after meeting time)
+        const closureTime = new Date(meetingTime.getTime() + (30 * 60 * 1000));
+        
+        // Check if it's time to close this match
+        if (now >= closureTime) {
+          logger.info(`⏰ Closing match ${doc.id} for timeSlot ${timeSlot} (meeting was at ${meetingTime.toLocaleTimeString()}, closing 30 mins later)`);
+          
+          // Update match status to 'completed'
+          batch.update(doc.ref, {
+            status: "completed",
+            completedAt: admin.firestore.Timestamp.now(),
+            autoClosedReason: "timeout_30_minutes_after_meeting",
+            meetingTime: admin.firestore.Timestamp.fromDate(meetingTime),
+            closureTime: admin.firestore.Timestamp.fromDate(closureTime)
+          });
+
+          closedMatches.push({
+            matchId: doc.id,
+            users: matchData.users || [],
+            timeSlot: timeSlot
+          });
+        }
+      });
+
+      // Commit all updates
+      if (closedMatches.length > 0) {
+        await batch.commit();
+        logger.info(`✅ Closed ${closedMatches.length} matches automatically`);
+        
+        // Log details for debugging
+        closedMatches.forEach((match) => {
+          logger.info(`📝 Closed match ${match.matchId} for users: ${match.users.join(", ")} at ${match.timeSlot}`);
+        });
+      } else {
+        logger.info(`✅ No matches need to be closed at this time`);
+      }
+
+    } catch (error) {
+      logger.error(`❌ Error in autoCloseMatches: ${error}`);
+      throw error;
+    }
+  }
+);

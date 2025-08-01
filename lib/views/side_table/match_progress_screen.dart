@@ -801,8 +801,8 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
         break;
       case 'completed':
         iconData = Icons.check_circle_outline_rounded;
-        iconColor = textTertiary;
-        backgroundColor = strokeLight;
+        iconColor = successColor;
+        backgroundColor = successColor.withOpacity(0.1);
         break;
       case 'cancelled':
       case 'expired': // Handle expired status

@@ -32,10 +32,54 @@ class MyApp extends StatelessWidget {
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         title: 'Sidekick',
         debugShowCheckedModeBanner: false,
-        home: AuthWrapper(),
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          primarySwatch: Colors.red,
+          primaryColor: const Color(0xFFDC2626),
+          scaffoldBackgroundColor: Colors.black,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            backgroundColor: Color(0xFF1C1C1E),
+            selectedItemColor: Color(0xFFDC2626),
+            unselectedItemColor: Color(0xFF8E8E93),
+            type: BottomNavigationBarType.fixed,
+          ),
+          dialogTheme: const DialogThemeData(
+            backgroundColor: Color(0xFF1C1C1E),
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            contentTextStyle: TextStyle(color: Color(0xFF8E8E93), fontSize: 16),
+          ),
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.white),
+            bodyMedium: TextStyle(color: Colors.white),
+            bodySmall: TextStyle(color: Color(0xFF8E8E93)),
+            headlineLarge: TextStyle(color: Colors.white),
+            headlineMedium: TextStyle(color: Colors.white),
+            headlineSmall: TextStyle(color: Colors.white),
+            titleLarge: TextStyle(color: Colors.white),
+            titleMedium: TextStyle(color: Colors.white),
+            titleSmall: TextStyle(color: Colors.white),
+          ),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFFDC2626),
+            secondary: Color(0xFFDC2626),
+            surface: Color(0xFF1C1C1E),
+            background: Colors.black,
+            error: Color(0xFFFF3B30),
+          ),
+        ),
+        home: const AuthWrapper(),
       ),
     );
   }

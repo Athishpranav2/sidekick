@@ -753,6 +753,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     controller: _messageController,
                     focusNode: _textFieldFocus,
                     enabled: canSendMessage,
+                    keyboardAppearance: Brightness.dark,
                     style: TextStyle(
                       color: canSendMessage ? textPrimary : textSecondary,
                       fontSize: 16,
