@@ -87,43 +87,38 @@ class ProfileScreen extends StatelessWidget {
       floating: false,
       pinned: true,
       backgroundColor: Colors.black,
+      surfaceTintColor: Colors.black,
+      shadowColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 20),
+          child: _buildModernActionButton(
+            icon: CupertinoIcons.ellipsis_circle,
+            onTap: () => _showOptionsBottomSheet(context, size),
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          color: Colors.black,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Profile',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      _buildModernActionButton(
-                        icon: CupertinoIcons.ellipsis_circle,
-                        onTap: () => _showOptionsBottomSheet(context, size),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
+        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Profile',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
               ),
             ),
-          ),
+          ],
+        ),
+        background: Container(
+          color: Colors.black,
+          child: const SafeArea(child: SizedBox.expand()),
         ),
       ),
     );
