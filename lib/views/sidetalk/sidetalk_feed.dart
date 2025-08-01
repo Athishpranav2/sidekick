@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'post_card.dart';
-import 'filter_button.dart';
-import 'filter_modal.dart';
+
 import '../../models/post.dart';
 import '../../models/filter_options.dart';
+import '../../core/constants/app_colors.dart';
 import '../compose/compose_screen.dart';
 
 class SidetalkFeed extends StatefulWidget {
@@ -13,60 +16,163 @@ class SidetalkFeed extends StatefulWidget {
   State<SidetalkFeed> createState() => _SidetalkFeedState();
 }
 
+enum PostTypeFilter { all, anonymous, nonAnonymous }
+
 class _SidetalkFeedState extends State<SidetalkFeed> {
-  String selectedFilter = 'All'; // Keep for backward compatibility
   FilterState currentFilter = const FilterState();
-  
+  PostTypeFilter postTypeFilter = PostTypeFilter.all;
+
   // Simple tracking of liked posts
   Set<String> likedPosts = <String>{};
-  
-  final List<Post> posts = [
-    Post(
-      id: '1',
-      content: 'Sometimes I wonder if anyone really sees me\nfor who I am underneath all the masks\nI wear every single day',
-      isAnonymous: true,
-      username: null,
-      timestamp: '2h',
-      likes: 23,
-      comments: 5,
-      cardColor: const Color(0xFFF5F5DC), // Beige
-    ),
-    Post(
-      id: '2',
-      content: 'The weight of pretending everything is fine\nis heavier than the problems themselves\nWhy do we do this to ourselves?',
-      isAnonymous: false,
-      username: 'midnight_thoughts',
-      timestamp: '4h',
-      likes: 47,
-      comments: 12,
-      cardColor: const Color(0xFFFFFACD), // Light yellow
-    ),
-    Post(
-      id: '3',
-      content: 'I deleted all my social media today\nand for the first time in years\nI can hear my own thoughts clearly',
-      isAnonymous: true,
-      username: null,
-      timestamp: '6h',
-      likes: 89,
-      comments: 23,
-      cardColor: const Color(0xFFE6E6E6), // Muted gray
-    ),
-    Post(
-      id: '4',
-      content: 'Love feels like a foreign language\nthat everyone else learned in school\nwhile I was absent that day',
-      isAnonymous: false,
-      username: 'lost_in_translation',
-      timestamp: '8h',
-      likes: 156,
-      comments: 34,
-      cardColor: const Color(0xFFF5F5DC), // Beige
-    ),
+  List<Post> posts = [];
+  bool isLoading = true;
+
+  // Card colors for posts
+  final List<Color> cardColors = [
+    const Color(0xFFF5F5DC), // Beige
+    const Color(0xFFFFFACD), // Light yellow
+    const Color(0xFFE6E6E6), // Muted gray
+    const Color(0xFFFFF0F5), // Light pink
+    const Color(0xFFF0F8FF), // Light blue
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLikedPosts();
+    _listenToPosts();
+  }
+
+  void _loadLikedPosts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Get all confessions where user has liked (only works with new array schema)
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('confessions')
+          .where('likes', arrayContains: user.uid)
+          .get();
+
+      setState(() {
+        likedPosts = querySnapshot.docs.map((doc) => doc.id).toSet();
+      });
+    } catch (e) {
+      print('Error loading liked posts: $e');
+      // If the query fails (due to old schema), just start with empty liked posts
+      setState(() {
+        likedPosts = <String>{};
+      });
+    }
+  }
+
+  void _listenToPosts() {
+    FirebaseFirestore.instance
+        .collection('confessions')
+        .orderBy('timestamp', descending: true)
+        .limit(50) // Limit to recent 50 posts for performance
+        .snapshots()
+        .listen((snapshot) {
+          if (mounted) {
+            setState(() {
+              posts = snapshot.docs
+                  .where((doc) {
+                    final data = doc.data();
+                    // Filter approved posts in the app to avoid compound index
+                    return data['status'] == 'approved';
+                  })
+                  .map((doc) {
+                    final data = doc.data();
+                    return _confessionToPost(doc.id, data);
+                  })
+                  .toList();
+              isLoading = false;
+            });
+          }
+        })
+        .onError((error) {
+          print('Error listening to posts: $error');
+          if (mounted) {
+            setState(() {
+              isLoading = false;
+            });
+          }
+        });
+  }
+
+  Post _confessionToPost(String docId, Map<String, dynamic> data) {
+    final timestamp =
+        (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+
+    // Handle likes - can be either array (new) or int (old schema)
+    int likesCount;
+    final likesData = data['likes'];
+    if (likesData is List) {
+      // New schema: array of user IDs
+      final likes = List<String>.from(
+        likesData.where((item) => item != null).map((item) => item.toString()),
+      );
+      likesCount = likes.length;
+
+      // Update local liked posts tracking for current user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && likes.contains(user.uid)) {
+        likedPosts.add(docId);
+      } else {
+        likedPosts.remove(docId);
+      }
+    } else if (likesData is int) {
+      // Old schema: direct count
+      likesCount = likesData;
+    } else {
+      // Default case
+      likesCount = 0;
+    }
+
+    // Handle comments - can be either array (new) or int (old schema)
+    int commentsCount;
+    final commentsData = data['comments'];
+    if (commentsData is List) {
+      // New schema: array of comment objects
+      final comments = List.from(commentsData.where((item) => item != null));
+      commentsCount = comments.length;
+    } else if (commentsData is int) {
+      // Old schema: direct count
+      commentsCount = commentsData;
+    } else {
+      // Default case
+      commentsCount = 0;
+    }
+
+    return Post(
+      id: docId,
+      content: data['text'] ?? '',
+      isAnonymous: data['isAnonymous'] ?? true,
+      username: data['username'],
+      timestamp: _formatTimestamp(timestamp),
+      likes: likesCount,
+      comments: commentsCount,
+      cardColor: cardColors[docId.hashCode % cardColors.length],
+    );
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else {
+      return '${difference.inDays}d';
+    }
+  }
 
   List<Post> get filteredPosts {
     List<Post> filtered = List.from(posts);
-    
-    // Filter by post type
+
+    // Filter by post type (existing filter)
     switch (currentFilter.postType) {
       case PostType.anonymous:
         filtered = filtered.where((post) => post.isAnonymous).toList();
@@ -78,7 +184,20 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         // Keep all posts
         break;
     }
-    
+
+    // Additional filter by anonymous/non-anonymous
+    switch (postTypeFilter) {
+      case PostTypeFilter.anonymous:
+        filtered = filtered.where((post) => post.isAnonymous).toList();
+        break;
+      case PostTypeFilter.nonAnonymous:
+        filtered = filtered.where((post) => !post.isAnonymous).toList();
+        break;
+      case PostTypeFilter.all:
+        // Keep all posts
+        break;
+    }
+
     // Filter by category (placeholder logic - you can expand this based on post content analysis)
     switch (currentFilter.category) {
       case CategoryFilter.positive:
@@ -97,14 +216,14 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         // Keep all posts
         break;
     }
-    
+
     // Filter by user's own posts (placeholder - requires user identification)
     if (currentFilter.showMyPostsOnly) {
       // filtered = filtered.where((post) => post.userId == currentUserId).toList();
       // For now, we'll just show posts with username (as example)
       filtered = filtered.where((post) => !post.isAnonymous).toList();
     }
-    
+
     // Sort posts
     switch (currentFilter.sortBy) {
       case SortOption.recent:
@@ -117,294 +236,626 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         filtered.sort((a, b) => b.comments.compareTo(a.comments));
         break;
     }
-    
+
     return filtered;
   }
 
-  // Handle filter changes
-  void _onFilterChanged(FilterState newFilter) {
-    setState(() {
-      currentFilter = newFilter;
-      // Update legacy selectedFilter for backward compatibility
-      switch (newFilter.postType) {
-        case PostType.all:
-          selectedFilter = 'All';
-          break;
-        case PostType.anonymous:
-          selectedFilter = 'Anonymous';
-          break;
-        case PostType.public:
-          selectedFilter = 'Public';
-          break;
-      }
-    });
-  }
+  // Firebase-based like toggle functionality
+  void _toggleLike(String postId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  // Show filter modal
-  void _showFilterModal() {
-    print('Filter modal button tapped!'); // Debug print
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => FilterModal(
-        currentFilter: currentFilter,
-        onFilterChanged: _onFilterChanged,
-      ),
-    );
-  }
+    final confessionRef = FirebaseFirestore.instance
+        .collection('confessions')
+        .doc(postId);
 
-  // Check if any filters are active
-  bool _hasActiveFilters() {
-    return currentFilter.postType != PostType.all ||
-           currentFilter.category != CategoryFilter.all ||
-           currentFilter.sortBy != SortOption.recent ||
-           currentFilter.showMyPostsOnly;
-  }
+    try {
+      // Check current state first
+      final doc = await confessionRef.get();
+      if (!doc.exists) return;
 
-  // Check if advanced filters (beyond post type) are active
-  bool _hasActiveAdvancedFilters() {
-    return currentFilter.category != CategoryFilter.all ||
-           currentFilter.sortBy != SortOption.recent ||
-           currentFilter.showMyPostsOnly;
-  }
+      final data = doc.data()!;
+      final likesData = data['likes'];
 
-  // Simple like toggle functionality
-  void _toggleLike(String postId) {
-    setState(() {
-      final postIndex = posts.indexWhere((post) => post.id == postId);
-      if (postIndex == -1) return;
-      
-      if (likedPosts.contains(postId)) {
-        // Unlike: remove from set and decrease count
-        likedPosts.remove(postId);
-        posts[postIndex].likes--;
+      if (likesData is List) {
+        // New schema: use Firestore array methods
+        final likes = List<String>.from(likesData);
+
+        if (likes.contains(user.uid)) {
+          // Unlike: remove user from array
+          await confessionRef.update({
+            'likes': FieldValue.arrayRemove([user.uid]),
+          });
+          setState(() {
+            likedPosts.remove(postId);
+          });
+        } else {
+          // Like: add user to array
+          await confessionRef.update({
+            'likes': FieldValue.arrayUnion([user.uid]),
+          });
+          setState(() {
+            likedPosts.add(postId);
+          });
+        }
       } else {
-        // Like: add to set and increase count
-        likedPosts.add(postId);
-        posts[postIndex].likes++;
+        // Old schema: convert to new schema with array union
+        await confessionRef.update({
+          'likes': FieldValue.arrayUnion([user.uid]),
+        });
+        setState(() {
+          likedPosts.add(postId);
+        });
       }
-    });
-  }
-
-  // Build empty state widget with dynamic message
-  Widget _buildEmptyState() {
-    String message;
-    String emoji = '📭';
-    
-    if (!_hasActiveFilters()) {
-      message = 'No posts yet. Be the first to share something!';
-      emoji = '✨';
-    } else {
-      // Generate message based on active filters
-      List<String> filterDescriptions = [];
-      
-      if (currentFilter.postType != PostType.all) {
-        filterDescriptions.add(currentFilter.postType.displayName.toLowerCase());
-      }
-      if (currentFilter.showMyPostsOnly) {
-        filterDescriptions.add('your own');
-      }
-      if (currentFilter.category != CategoryFilter.all) {
-        filterDescriptions.add(currentFilter.category.displayName.toLowerCase());
-      }
-      
-      if (filterDescriptions.isNotEmpty) {
-        message = 'No ${filterDescriptions.join(' ')} posts found.\nTry adjusting your filters.';
-      } else {
-        message = 'No posts match your current filters.\nTry adjusting your search criteria.';
-      }
+    } catch (e) {
+      print('Error toggling like: $e');
+      // Revert local state on error
+      setState(() {
+        if (likedPosts.contains(postId)) {
+          likedPosts.remove(postId);
+        } else {
+          likedPosts.add(postId);
+        }
+      });
     }
-    
+  }
+
+  // iOS-style loading state
+  Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(
-              color: Color(0xFF888888),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
-            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Loading posts...',
+            style: AppTypography.callout.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF000000),
-      body: SafeArea(
+  // iOS-style empty state
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.layoutMargin,
+        ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Top Navigation Bar
+            // iOS-style icon
             Container(
-              height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 16), // Consistent padding
-              child: Center(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.tertiaryBackground,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+              ),
+              child: Icon(
+                Icons.forum_rounded,
+                size: 40,
+                color: AppColors.textTertiary,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xxl),
+
+            // Title
+            Text(
+              'No Posts Yet',
+              style: AppTypography.title2.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            // Description
+            Text(
+              'Be the first to share your thoughts\nwith the community.',
+              style: AppTypography.subheadline.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: AppSpacing.xxxl),
+
+            // Call to action button
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          const ComposeScreen(),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return SlideTransition(
+                              position:
+                                  Tween<Offset>(
+                                    begin: const Offset(0.0, 1.0),
+                                    end: Offset.zero,
+                                  ).animate(
+                                    CurvedAnimation(
+                                      parent: animation,
+                                      curve: AppAnimations.easeOut,
+                                    ),
+                                  ),
+                              child: child,
+                            );
+                          },
+                      transitionDuration: AppAnimations.medium,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.lg,
+                    horizontal: AppSpacing.xl,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.radiusButton,
+                    ),
+                  ),
+                  elevation: 0,
+                ),
                 child: Text(
-                  'SIDETALK',
-                  style: TextStyle(
-                    fontFamily: 'BebasNeue',
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  'Create Post',
+                  style: AppTypography.callout.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
-                    letterSpacing: 2,
                   ),
                 ),
               ),
             ),
-            
-            // Enhanced Filter Row with quick filters and comprehensive filter access
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Quick filter chips
-                  Container(
-                    height: 50,
-                    child: Row(
-                      children: [
-                        // Post Type filters: All, Anonymous, Public
-                        FilterButton(
-                          text: 'ALL',
-                          isSelected: currentFilter.postType == PostType.all,
-                          onTap: () => _onFilterChanged(currentFilter.copyWith(postType: PostType.all)),
-                        ),
-                        const SizedBox(width: 8),
-                        FilterButton(
-                          text: 'ANONYMOUS',
-                          isSelected: currentFilter.postType == PostType.anonymous,
-                          onTap: () => _onFilterChanged(currentFilter.copyWith(postType: PostType.anonymous)),
-                        ),
-                        const SizedBox(width: 8),
-                        FilterButton(
-                          text: 'PUBLIC',
-                          isSelected: currentFilter.postType == PostType.public,
-                          onTap: () => _onFilterChanged(currentFilter.copyWith(postType: PostType.public)),
-                        ),
-                        const Spacer(),
-                        // All Filters button
-                        InkWell(
-                          onTap: _showFilterModal,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _hasActiveAdvancedFilters() ? const Color(0xFFDC2626) : const Color(0xFF2A2A2A),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _hasActiveAdvancedFilters() ? const Color(0xFFDC2626) : const Color(0xFF444444),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(
-                                  Icons.tune,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Filters',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Minimalistic filter button
+  Widget _buildFilterButton() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showFilterSheet();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        child: Icon(
+          Icons.filter_list_outlined,
+          color: postTypeFilter == PostTypeFilter.all
+              ? AppColors.textSecondary
+              : AppColors.textPrimary,
+          size: 22,
+        ),
+      ),
+    );
+  }
+
+  // Filter action sheet
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(AppSpacing.radiusCard),
+            topRight: Radius.circular(AppSpacing.radiusCard),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Minimal handle
+              Container(
+                width: 32,
+                height: 3,
+                margin: const EdgeInsets.only(top: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.separator,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
               ),
+
+              const SizedBox(height: AppSpacing.xxl),
+
+              // Simple title
+              Text(
+                'Filter',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // Filter options
+              _buildFilterOption(
+                title: 'All Posts',
+                isSelected: postTypeFilter == PostTypeFilter.all,
+                onTap: () => _updateFilter(PostTypeFilter.all),
+              ),
+              _buildFilterOption(
+                title: 'Anonymous Only',
+                isSelected: postTypeFilter == PostTypeFilter.anonymous,
+                onTap: () => _updateFilter(PostTypeFilter.anonymous),
+              ),
+              _buildFilterOption(
+                title: 'Public Only',
+                isSelected: postTypeFilter == PostTypeFilter.nonAnonymous,
+                onTap: () => _updateFilter(PostTypeFilter.nonAnonymous),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterOption({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+        Navigator.pop(context);
+      },
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xs,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: AppColors.textPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
-            
-            // Posts Feed with Empty State
-            Expanded(
-              child: filteredPosts.isEmpty 
-                ? _buildEmptyState() 
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Consistent 16px padding
-                    itemCount: filteredPosts.length,
-                    itemBuilder: (context, index) {
-                      final currentPost = filteredPosts[index];
-                      
-                      return PostCard(
-                        post: currentPost,
-                        likedByMe: likedPosts.contains(currentPost.id),
-                        onLike: () {
-                          _toggleLike(currentPost.id);
-                        },
-                        onReport: () {
-                          // Handle report functionality
-                        },
-                      );
-                    },
-                  ),
+            const SizedBox(width: AppSpacing.lg),
+            Text(
+              title,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+              ),
             ),
           ],
         ),
       ),
-      
-      // Improved Floating Action Button (Red + in bottom right)
-      floatingActionButton: Semantics(
-        label: 'New Post',
-        child: Container(
-          margin: const EdgeInsets.all(16), // 16px margin from edges as specified
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: const Color(0xFFDC2626), // Keep the red color
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFDC2626).withOpacity(0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: () {
-                // Navigate to compose screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ComposeScreen(),
-                    settings: const RouteSettings(name: '/sidetalk/compose'),
-                  ),
-                );
-              },
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 28,
+    );
+  }
+
+  void _updateFilter(PostTypeFilter filter) {
+    setState(() {
+      postTypeFilter = filter;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(), // iOS-style bouncing
+        slivers: [
+          // iOS-style navigation bar
+          SliverAppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            pinned: true,
+            centerTitle: true,
+            title: Text(
+              'SIDETALK',
+              style: AppTypography.headline.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
               ),
             ),
+            actions: [
+              _buildFilterButton(),
+              const SizedBox(width: AppSpacing.md),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 0.5, color: AppColors.separator),
+            ),
+          ),
+
+          // Posts content
+          isLoading
+              ? SliverFillRemaining(child: _buildLoadingState())
+              : filteredPosts.isEmpty
+              ? SliverFillRemaining(child: _buildEmptyState())
+              : SliverPadding(
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.sm,
+                    bottom: 100, // Space for FAB
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final currentPost = filteredPosts[index];
+                      return Container(
+                        margin: EdgeInsets.only(
+                          bottom: index == filteredPosts.length - 1 ? 0 : 1,
+                        ),
+                        child: PostCard(
+                          post: currentPost,
+                          likedByMe: likedPosts.contains(currentPost.id),
+                          onLike: () {
+                            HapticFeedback.lightImpact();
+                            _toggleLike(currentPost.id);
+                          },
+                          onReport: () {
+                            _showReportSheet(currentPost);
+                          },
+                        ),
+                      );
+                    }, childCount: filteredPosts.length),
+                  ),
+                ),
+        ],
+      ),
+
+      // iOS-style floating action button
+      floatingActionButton: _buildIOSFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  // iOS-style floating action button
+  Widget _buildIOSFAB() {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowLight,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(28),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(28),
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const ComposeScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return SlideTransition(
+                        position:
+                            Tween<Offset>(
+                              begin: const Offset(0.0, 1.0),
+                              end: Offset.zero,
+                            ).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: AppAnimations.easeOut,
+                              ),
+                            ),
+                        child: child,
+                      );
+                    },
+                transitionDuration: AppAnimations.medium,
+              ),
+            );
+          },
+          child: const Icon(Icons.edit_rounded, color: Colors.white, size: 28),
+        ),
+      ),
+    );
+  }
+
+  // iOS-style report action sheet
+  void _showReportSheet(Post post) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.secondaryBackground,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radiusMedium),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 36,
+                height: 5,
+                margin: const EdgeInsets.only(top: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary,
+                  borderRadius: BorderRadius.circular(2.5),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // Title
+              Text(
+                'Report Post',
+                style: AppTypography.headline.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Report options
+              _buildReportOption(
+                icon: Icons.report_rounded,
+                title: 'Inappropriate Content',
+                onTap: () => _handleReport(post, 'inappropriate'),
+              ),
+              _buildReportOption(
+                icon: Icons.block_rounded,
+                title: 'Spam',
+                onTap: () => _handleReport(post, 'spam'),
+              ),
+              _buildReportOption(
+                icon: Icons.dangerous_rounded,
+                title: 'Harmful Content',
+                onTap: () => _handleReport(post, 'harmful'),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Cancel button
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.layoutMargin,
+                ),
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.tertiaryBackground,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.lg,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusButton,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    'Cancel',
+                    style: AppTypography.callout.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+            ],
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+
+  Widget _buildReportOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.layoutMargin,
+        vertical: AppSpacing.xs,
+      ),
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: AppColors.tertiaryBackground,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.lg,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusButton),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.destructive, size: 20),
+            const SizedBox(width: AppSpacing.lg),
+            Text(
+              title,
+              style: AppTypography.callout.copyWith(
+                color: AppColors.destructive,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleReport(Post post, String reason) {
+    Navigator.pop(context);
+    HapticFeedback.heavyImpact();
+    // Report submitted silently - no notification needed
   }
 }

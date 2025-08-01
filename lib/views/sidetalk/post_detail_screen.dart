@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../models/post.dart';
 import '../../models/comment.dart';
 import '../../core/services/comment_service.dart';
+import '../../core/constants/app_colors.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
@@ -14,9 +14,15 @@ class PostDetailScreen extends StatefulWidget {
   State<PostDetailScreen> createState() => _PostDetailScreenState();
 }
 
-class _PostDetailScreenState extends State<PostDetailScreen> {
+class _PostDetailScreenState extends State<PostDetailScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _isCommentFocused = false;
+  late AnimationController _inputAnimationController;
+  late Animation<double> _inputAnimation;
 
   bool get _hasInputText => _commentController.text.trim().isNotEmpty;
 
@@ -26,16 +32,55 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _commentController.addListener(() {
       setState(() {}); // Rebuild to update send button state
     });
+
+    // Initialize animation controller
+    _inputAnimationController = AnimationController(
+      duration: AppAnimations.medium,
+      vsync: this,
+    );
+    _inputAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _inputAnimationController,
+        curve: AppAnimations.easeOut,
+      ),
+    );
+
+    // Set up focus listeners for keyboard handling
+    _commentFocusNode.addListener(() {
+      setState(() {
+        _isCommentFocused = _commentFocusNode.hasFocus;
+      });
+
+      if (_commentFocusNode.hasFocus) {
+        _inputAnimationController.forward();
+        // Auto-scroll to bottom when keyboard appears
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: AppAnimations.medium,
+              curve: AppAnimations.easeOut,
+            );
+          }
+        });
+      } else {
+        _inputAnimationController.reverse();
+      }
+    });
   }
 
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
+    _scrollController.dispose();
+    _inputAnimationController.dispose();
     super.dispose();
   }
 
   void _sendComment() async {
     if (_hasInputText && !_isLoading) {
+      HapticFeedback.mediumImpact();
       setState(() {
         _isLoading = true;
       });
@@ -51,24 +96,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
 
       if (success) {
+        HapticFeedback.lightImpact();
         _commentController.clear();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Comment added successfully!'),
-              backgroundColor: Color(0xFFDC2626),
-            ),
-          );
-        }
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to add comment. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        HapticFeedback.heavyImpact();
       }
     }
   }
@@ -79,340 +110,433 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF000000),
+        systemNavigationBarColor: AppColors.background,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppColors.background,
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
-          child: Column(
-            children: [
-              // Top Bar (Header)
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+          child: GestureDetector(
+            onTap: () {
+              // Dismiss keyboard when tapping outside
+              if (_commentFocusNode.hasFocus) {
+                _commentFocusNode.unfocus();
+              }
+            },
+            child: Stack(
+              children: [
+                // Main content with scroll controller
+                Column(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 24,
+                    // Premium iOS-style header
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.post.isAnonymous ? 'Anonymous Post' : '${widget.post.username}\'s Post',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.separator,
+                            width: 0.5,
                           ),
-                          Text(
-                            '${widget.post.timestamp} ago',
-                            style: const TextStyle(
-                              color: Color(0xFF888888),
-                              fontSize: 14,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(context);
+                            },
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: AppColors.textPrimary,
+                              size: 24,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.tertiaryBackground,
+                              shape: const CircleBorder(),
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.post.isAnonymous
+                                      ? 'Anonymous Post'
+                                      : '${widget.post.username}\'s Post',
+                                  style: AppTypography.headline.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '${widget.post.timestamp} ago',
+                                  style: AppTypography.footnote.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Post Section with card-style container
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E), // Slightly darker card for contrast
-                          borderRadius: BorderRadius.circular(12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: EdgeInsets.only(
+                          left: AppSpacing.lg,
+                          right: AppSpacing.lg,
+                          top: AppSpacing.lg,
+                          bottom: 120, // Space for floating comment input
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // User info row with improved layout
-                            Row(
-                              children: [
-                                _buildAvatar(),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            // Premium post content card
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(
+                                bottom: AppSpacing.lg,
+                              ),
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusCard,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.separator,
+                                  width: 0.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.shadowLight,
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                    spreadRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Premium user info row
+                                  Row(
                                     children: [
-                                      Text(
-                                        widget.post.isAnonymous 
-                                            ? 'Anonymous' 
-                                            : '@${widget.post.username}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        widget.post.timestamp,
-                                        style: const TextStyle(
-                                          color: Color(0xFF888888),
-                                          fontSize: 12,
+                                      _buildAvatar(),
+                                      const SizedBox(width: AppSpacing.md),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    widget.post.isAnonymous
+                                                        ? 'Anonymous'
+                                                        : widget
+                                                                  .post
+                                                                  .username ??
+                                                              'User',
+                                                    style: AppTypography.callout
+                                                        .copyWith(
+                                                          color: AppColors
+                                                              .textPrimary,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (!widget
+                                                    .post
+                                                    .isAnonymous) ...[
+                                                  const SizedBox(
+                                                    width: AppSpacing.xs,
+                                                  ),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.primary,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            4,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      'PUBLIC',
+                                                      style: AppTypography
+                                                          .caption2
+                                                          .copyWith(
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 10,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${widget.post.timestamp} ago',
+                                              style: AppTypography.footnote
+                                                  .copyWith(
+                                                    color:
+                                                        AppColors.textSecondary,
+                                                  ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 16),
-                            
-                            // Post content
-                            Text(
-                              widget.post.content,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                                height: 1.5,
+
+                                  const SizedBox(height: AppSpacing.lg),
+
+                                  // Premium post content
+                                  Text(
+                                    widget.post.content,
+                                    style: AppTypography.body.copyWith(
+                                      color: AppColors.textPrimary,
+                                      height: 1.5,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // Tags
+                                  Wrap(
+                                    spacing: 6,
+                                    children: [
+                                      _buildTag('#general'),
+                                      if (!widget.post.isAnonymous)
+                                        _buildTag('#public'),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Post stats with emoji icons
+                                  Row(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.favorite,
+                                            color: Colors.red,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '${widget.post.likes}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF888888),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 20),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.comment_outlined,
+                                            color: Colors.grey[400],
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '${widget.post.comments}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF888888),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            
-                            const SizedBox(height: 12),
-                            
-                            // Tags
-                            Wrap(
-                              spacing: 6,
-                              children: [
-                                _buildTag('#general'),
-                                if (!widget.post.isAnonymous) _buildTag('#public'),
-                              ],
+
+                            const SizedBox(height: 24),
+
+                            // Separator line with proper padding
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              height: 1,
+                              color: const Color(0xFF333333),
                             ),
-                            
-                            const SizedBox(height: 16),
-                            
-                            // Post stats with emoji icons
-                            Row(
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.favorite,
-                                      color: Colors.red,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${widget.post.likes}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF888888),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+
+                            const SizedBox(height: 20),
+
+                            // Comments Section with StreamBuilder
+                            StreamBuilder<List<Comment>>(
+                              stream: CommentService.getCommentsStream(
+                                widget.post.id,
+                              ),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFFDC2626),
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(width: 20),
-                                Row(
+                                  );
+                                }
+
+                                final comments = snapshot.data ?? [];
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      Icons.comment_outlined,
-                                      color: Colors.grey[400],
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${widget.post.comments}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF888888),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                    // Premium Comments Section Header
+                                    Container(
+                                      padding: const EdgeInsets.all(
+                                        AppSpacing.lg,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSpacing.radiusCard,
+                                        ),
+                                        border: Border.all(
+                                          color: AppColors.separator,
+                                          width: 0.5,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.mode_comment_outlined,
+                                            color: AppColors.textSecondary,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Text(
+                                            'Comments (${comments.length})',
+                                            style: AppTypography.callout
+                                                .copyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ],
                                       ),
                                     ),
+
+                                    const SizedBox(height: AppSpacing.lg),
+
+                                    // Comments List
+                                    if (comments.isEmpty)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(
+                                          AppSpacing.xxl,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.cardBackground,
+                                          borderRadius: BorderRadius.circular(
+                                            AppSpacing.radiusCard,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.separator,
+                                            width: 0.5,
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Column(
+                                            children: [
+                                              Icon(
+                                                Icons
+                                                    .chat_bubble_outline_rounded,
+                                                color: AppColors.textTertiary,
+                                                size: 32,
+                                              ),
+                                              const SizedBox(
+                                                height: AppSpacing.md,
+                                              ),
+                                              Text(
+                                                'No comments yet',
+                                                style: AppTypography.callout
+                                                    .copyWith(
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                              ),
+                                              const SizedBox(
+                                                height: AppSpacing.xs,
+                                              ),
+                                              Text(
+                                                'Be the first to comment!',
+                                                style: AppTypography.footnote
+                                                    .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      ListView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount: comments.length,
+                                        itemBuilder: (context, index) {
+                                          return _buildCommentItem(
+                                            comments[index],
+                                          );
+                                        },
+                                      ),
                                   ],
-                                ),
-                              ],
+                                );
+                              },
                             ),
+
+                            const SizedBox(height: AppSpacing.lg),
                           ],
                         ),
                       ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Separator line with proper padding
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        height: 1,
-                        color: const Color(0xFF333333),
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      // Comments Section with StreamBuilder
-                      StreamBuilder<List<Comment>>(
-                        stream: CommentService.getCommentsStream(widget.post.id),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFFDC2626),
-                                ),
-                              ),
-                            );
-                          }
+                    ),
+                  ],
+                ),
 
-                          final comments = snapshot.data ?? [];
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Comments Section Header
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.comment_outlined,
-                                      color: Colors.grey[400],
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Comments (${comments.length})',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              
-                              const SizedBox(height: 16),
-                              
-                              // Comments List
-                              if (comments.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Center(
-                                    child: Text(
-                                      'No comments yet. Be the first to comment!',
-                                      style: TextStyle(
-                                        color: Colors.grey[400],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: comments.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildCommentItem(comments[index]);
-                                  },
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      
-                      const SizedBox(height: 80), // Space for input bar
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Input Bar (Bottom) - Sticky
-        bottomNavigationBar: Container(
-          color: const Color(0xFF000000),
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: MediaQuery.of(context).padding.bottom + 8,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F1F1F), // Slightly lighter background
-              borderRadius: BorderRadius.circular(20), // Increased border radius
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Add a comment…', // Removed emoji from placeholder
-                      hintStyle: const TextStyle(
-                        color: Color(0xFF666666),
-                        fontSize: 14,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.comment_outlined,
-                        color: Colors.grey[600],
-                        size: 18,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12), // Improved padding
-                    ),
-                    maxLines: null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: (_hasInputText && !_isLoading) ? _sendComment : null,
-                  child: Container(
-                    padding: const EdgeInsets.all(6), // Smaller send button
-                    decoration: BoxDecoration(
-                      color: (_hasInputText && !_isLoading) ? const Color(0xFFDC2626) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(
-                            Icons.send,
-                            color: (_hasInputText && !_isLoading) ? Colors.white : const Color(0xFF666666),
-                            size: 18, // Smaller icon size
-                          ),
-                  ),
-                ),
+                // Floating comment input
+                _buildFloatingCommentInput(),
               ],
             ),
           ),
@@ -421,47 +545,235 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  // Perfect floating comment input
+  Widget _buildFloatingCommentInput() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: AnimatedBuilder(
+        animation: _inputAnimation,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _isCommentFocused ? 0 : 0),
+            child: Container(
+              padding: EdgeInsets.only(
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.md,
+                bottom: MediaQuery.of(context).viewInsets.bottom > 0
+                    ? AppSpacing.md
+                    : MediaQuery.of(context).padding.bottom + AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                border: Border(
+                  top: BorderSide(
+                    color: _isCommentFocused
+                        ? AppColors.primary.withOpacity(0.3)
+                        : AppColors.separator,
+                    width: _isCommentFocused ? 1.0 : 0.5,
+                  ),
+                ),
+                boxShadow: _isCommentFocused
+                    ? [
+                        BoxShadow(
+                          color: AppColors.shadowLight,
+                          blurRadius: 20,
+                          offset: const Offset(0, -4),
+                          spreadRadius: 0,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: AnimatedContainer(
+                duration: AppAnimations.fast,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(
+                    _isCommentFocused
+                        ? AppSpacing.radiusLarge
+                        : AppSpacing.radiusButton,
+                  ),
+                  border: Border.all(
+                    color: _isCommentFocused
+                        ? AppColors.primary.withOpacity(0.2)
+                        : AppColors.separator,
+                    width: 0.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadowLight,
+                      blurRadius: _isCommentFocused ? 12 : 6,
+                      offset: const Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: _isCommentFocused ? AppSpacing.md : AppSpacing.sm,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 120, // Max height for multiline
+                        ),
+                        child: TextField(
+                          controller: _commentController,
+                          focusNode: _commentFocusNode,
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.textPrimary,
+                            height: 1.4,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: _isCommentFocused
+                                ? 'Share your thoughts...'
+                                : 'Add a comment…',
+                            hintStyle: AppTypography.body.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: _isCommentFocused ? AppSpacing.sm : 0,
+                              vertical: AppSpacing.xs,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.newline,
+                          keyboardType: TextInputType.multiline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    // Perfect send button
+                    AnimatedScale(
+                      scale: _isCommentFocused ? 1.1 : 1.0,
+                      duration: AppAnimations.fast,
+                      child: GestureDetector(
+                        onTap: (_hasInputText && !_isLoading)
+                            ? () {
+                                HapticFeedback.mediumImpact();
+                                _sendComment();
+                              }
+                            : null,
+                        child: Container(
+                          padding: EdgeInsets.all(
+                            _isCommentFocused ? AppSpacing.md : AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: (_hasInputText && !_isLoading)
+                                ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.primary,
+                                      AppColors.primaryDark,
+                                    ],
+                                  )
+                                : null,
+                            color: (_hasInputText && !_isLoading)
+                                ? null
+                                : AppColors.tertiaryBackground,
+                            borderRadius: BorderRadius.circular(
+                              _isCommentFocused
+                                  ? AppSpacing.radiusLarge
+                                  : AppSpacing.radiusButton,
+                            ),
+                            boxShadow:
+                                (_hasInputText &&
+                                    !_isLoading &&
+                                    _isCommentFocused)
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.send_rounded,
+                                  color: (_hasInputText && !_isLoading)
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  size: _isCommentFocused ? 22 : 18,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildAvatar() {
     if (widget.post.isAnonymous) {
-      // For anonymous posts, use the single SVG avatar with grey background
+      // Premium anonymous avatar
       return Container(
-        width: 32,
-        height: 32,
+        width: AppSpacing.avatarMedium,
+        height: AppSpacing.avatarMedium,
         decoration: BoxDecoration(
-          color: Colors.grey[600], // Grey background for the SVG
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.tertiaryBackground,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.separator, width: 0.5),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(4), // Reduced padding to make SVG bigger
-          child: SvgPicture.asset(
-            'assets/avatar/anon_user.svg',
-            width: 24, // Increased from 20 to 24
-            height: 24, // Increased from 20 to 24
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Make SVG white
-          ),
+        child: Icon(
+          Icons.account_circle_rounded,
+          color: AppColors.textTertiary,
+          size: 24,
         ),
       );
     } else {
-      String displayText = widget.post.username != null 
-          ? widget.post.username!.length >= 2 
-              ? widget.post.username!.substring(0, 2).toUpperCase()
-              : widget.post.username!.substring(0, 1).toUpperCase()
-          : '2';
-      
+      String displayText = widget.post.username != null
+          ? widget.post.username!.length >= 2
+                ? widget.post.username!.substring(0, 2).toUpperCase()
+                : widget.post.username!.substring(0, 1).toUpperCase()
+          : 'U';
+
       return Container(
-        width: 32,
-        height: 32,
+        width: AppSpacing.avatarMedium,
+        height: AppSpacing.avatarMedium,
         decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.primaryDark],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadowLight,
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Center(
           child: Text(
             displayText,
-            style: const TextStyle(
+            style: AppTypography.callout.copyWith(
               color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -489,55 +801,85 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildCommentItem(Comment comment) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10, left: 16, right: 16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+        border: Border.all(color: AppColors.separator, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowLight,
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Username with avatar
+          // Premium comment header
           Row(
             children: [
               _buildCommentAvatar(comment),
-              const SizedBox(width: 8),
-              Text(
-                comment.isAnonymous ? 'Anonymous' : comment.username,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          comment.isAnonymous ? 'Anonymous' : comment.username,
+                          style: AppTypography.callout.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (!comment.isAnonymous) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.systemBlue,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              'COMMENTER',
+                              style: AppTypography.caption2.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      comment.timestamp,
+                      style: AppTypography.caption2.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          
-          // Comment bubble with improved styling
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2C2C2C), // Updated background color
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  comment.content,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  comment.timestamp,
-                  style: const TextStyle(
-                    color: Color(0xFF999999), // Lighter gray for timestamp
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+
+          const SizedBox(height: AppSpacing.sm),
+
+          // Premium comment content
+          Text(
+            comment.content,
+            style: AppTypography.body.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.4,
             ),
           ),
         ],
@@ -545,49 +887,57 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
-  // Helper method to build comment avatars
+  // Premium comment avatar
   Widget _buildCommentAvatar(Comment comment) {
     if (comment.isAnonymous) {
-      // For anonymous comments, use the same SVG avatar with grey background
       return Container(
-        width: 20,
-        height: 20,
+        width: AppSpacing.avatarSmall,
+        height: AppSpacing.avatarSmall,
         decoration: BoxDecoration(
-          color: Colors.grey[600], // Grey background for the SVG
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.tertiaryBackground,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.separator, width: 0.5),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(2), // Reduced padding to make SVG bigger
-          child: SvgPicture.asset(
-            'assets/avatar/anon_user.svg',
-            width: 16, // Increased from 14 to 16
-            height: 16, // Increased from 14 to 16
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Make SVG white
-          ),
+        child: Icon(
+          Icons.account_circle_rounded,
+          color: AppColors.textTertiary,
+          size: 16,
         ),
       );
     } else {
-      // For named users, show initials in colored circle
-      String initials = comment.username.isNotEmpty 
-          ? comment.username.length >= 2 
-              ? comment.username.substring(0, 2).toUpperCase()
-              : comment.username.substring(0, 1).toUpperCase()
+      String initials = comment.username.isNotEmpty
+          ? comment.username.substring(0, 1).toUpperCase()
           : 'U';
-      
+
       return Container(
-        width: 20,
-        height: 20,
+        width: AppSpacing.avatarSmall,
+        height: AppSpacing.avatarSmall,
         decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
-          borderRadius: BorderRadius.circular(10),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.systemBlue,
+              AppColors.systemBlue.withOpacity(0.8),
+            ],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadowLight,
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Center(
           child: Text(
             initials,
-            style: const TextStyle(
+            style: AppTypography.caption2.copyWith(
               color: Colors.white,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
             ),
           ),
         ),

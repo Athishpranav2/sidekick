@@ -27,7 +27,8 @@ class VentCornerScreen extends StatefulWidget {
 class _VentCornerScreenState extends State<VentCornerScreen> {
   String _selectedFilter = 'ALL';
   final _scrollController = ScrollController();
-  bool _showHowItWorks = true; // Controls visibility of the how it works overlay
+  bool _showHowItWorks =
+      true; // Controls visibility of the how it works overlay
 
   @override
   void dispose() {
@@ -43,14 +44,17 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
 
   Widget _buildHowItWorksOverlay() {
     final size = MediaQuery.of(context).size;
-    
+
     return Positioned.fill(
       child: Container(
         color: Colors.black.withOpacity(0.9),
         child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: size.width * 0.06, vertical: size.height * 0.05),
+              padding: EdgeInsets.symmetric(
+                horizontal: size.width * 0.06,
+                vertical: size.height * 0.05,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -82,7 +86,7 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                     ),
                   ),
                   SizedBox(height: size.height * 0.04),
-                  
+
                   // How It Works Window
                   Container(
                     width: double.infinity,
@@ -108,26 +112,29 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                           size,
                           icon: Icons.edit_note_rounded,
                           title: 'Post Confessions',
-                          subtitle: 'Share your thoughts anonymously or publicly with the community.',
+                          subtitle:
+                              'Share your thoughts anonymously or publicly with the community.',
                         ),
                         SizedBox(height: size.height * 0.04),
                         _buildStep(
                           size,
                           icon: Icons.favorite_border_rounded,
                           title: 'Engage & Connect',
-                          subtitle: 'Like, comment, and interact with posts from other students.',
+                          subtitle:
+                              'Like, comment, and interact with posts from other students.',
                         ),
                         SizedBox(height: size.height * 0.04),
                         _buildStep(
                           size,
                           icon: Icons.filter_alt_outlined,
                           title: 'Filter Your Feed',
-                          subtitle: 'Switch between all, anonymous, or public confessions.',
+                          subtitle:
+                              'Switch between all, anonymous, or public confessions.',
                         ),
                       ],
                     ),
                   ),
-                  
+
                   // Get Started Button (below the window)
                   SizedBox(height: size.height * 0.06),
                   SizedBox(
@@ -140,7 +147,9 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                           vertical: size.height * 0.022,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(size.width * 0.04),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.04,
+                          ),
                         ),
                         elevation: 0,
                       ),
@@ -180,11 +189,7 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
             color: const Color(0xFF1C1C1E),
             borderRadius: BorderRadius.circular(size.width * 0.03),
           ),
-          child: Icon(
-            icon,
-            color: kRed,
-            size: size.width * 0.07,
-          ),
+          child: Icon(icon, color: kRed, size: size.width * 0.07),
         ),
         SizedBox(width: size.width * 0.04),
         Expanded(
@@ -220,37 +225,39 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
     return Stack(
       children: [
         Scaffold(
-      backgroundColor: kBlack,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _buildFilterBar(),
-          Expanded(child: _buildConfessionsList()),
-        ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 28.0, right: 20.0),
-        child: SizedBox(
-          height: 68,
-          width: 68,
-          child: FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ComposeScreen()),
-              );
-            },
-            backgroundColor: kRed,
-            child: const Icon(Icons.add, color: kWhite, size: 36),
-            elevation: 8,
-            shape: const CircleBorder(),
+          backgroundColor: kBlack,
+          appBar: _buildAppBar(),
+          body: Column(
+            children: [
+              _buildFilterBar(),
+              Expanded(child: _buildConfessionsList()),
+            ],
           ),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 28.0, right: 20.0),
+            child: SizedBox(
+              height: 68,
+              width: 68,
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ComposeScreen(),
+                    ),
+                  );
+                },
+                backgroundColor: kRed,
+                child: const Icon(Icons.add, color: kWhite, size: 36),
+                elevation: 8,
+                shape: const CircleBorder(),
+              ),
+            ),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
-    ),
-    if (_showHowItWorks) _buildHowItWorksOverlay(),
-    ],
+        if (_showHowItWorks) _buildHowItWorksOverlay(),
+      ],
     );
   }
 
@@ -310,7 +317,9 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.tune, color: kWhite, size: 26),
-            onPressed: () {/* TODO: Open filters/settings */},
+            onPressed: () {
+              /* TODO: Open filters/settings */
+            },
             tooltip: 'More filters',
           ),
         ],
@@ -362,7 +371,10 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
           itemCount: filteredDocs.length,
           itemBuilder: (context, index) {
             final doc = filteredDocs[index];
-            return _buildConfessionCard(doc.data() as Map<String, dynamic>, doc.id);
+            return _buildConfessionCard(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
           },
         );
       },
@@ -375,12 +387,15 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
     final isAnonymous = data['isAnonymous'] ?? true;
     final username = data['username']?.toString();
     final text = data['text']?.toString() ?? '';
-    final timestamp = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final timestamp =
+        (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
     // Parse likes (handle both list and int formats)
     final List likesList = data['likes'] is List ? data['likes'] as List : [];
     final int likes = likesList.length;
     // Parse comments (handle both list and int formats)
-    final List commentsList = data['comments'] is List ? data['comments'] as List : [];
+    final List commentsList = data['comments'] is List
+        ? data['comments'] as List
+        : [];
     final int comments = commentsList.length;
     // Card color: assign a pastel/grunge color based on username hash
     // Grey for anonymous, faded red for public
@@ -399,8 +414,10 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
       cardColor: cardColor,
     );
     // Use FirebaseAuth for userId if available
-    final userId = null; // TODO: Replace with FirebaseAuth.instance.currentUser?.uid
-    final userName = null; // TODO: Replace with FirebaseAuth.instance.currentUser?.displayName
+    final userId =
+        null; // TODO: Replace with FirebaseAuth.instance.currentUser?.uid
+    final userName =
+        null; // TODO: Replace with FirebaseAuth.instance.currentUser?.displayName
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
@@ -409,7 +426,9 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
             context: context,
             builder: (context) => Dialog(
               backgroundColor: kDarkGray,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -447,15 +466,24 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
           post: post,
           likedByMe: likesList.contains(userId),
           onLike: () async {
-            final docRef = FirebaseFirestore.instance.collection('confessions').doc(docId);
+            final docRef = FirebaseFirestore.instance
+                .collection('confessions')
+                .doc(docId);
             if (likesList.contains(userId)) {
-              await docRef.update({'likes': FieldValue.arrayRemove([userId])});
+              await docRef.update({
+                'likes': FieldValue.arrayRemove([userId]),
+              });
             } else {
-              await docRef.update({'likes': FieldValue.arrayUnion([userId])});
+              await docRef.update({
+                'likes': FieldValue.arrayUnion([userId]),
+              });
             }
           },
           onComment: () {
-            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            final userProvider = Provider.of<UserProvider>(
+              context,
+              listen: false,
+            );
             final user = userProvider.user;
             showModalBottomSheet(
               context: context,
@@ -478,9 +506,12 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                         'text': commentText.trim(),
                         'timestamp': DateTime.now().toIso8601String(),
                       };
-                      await FirebaseFirestore.instance.collection('confessions').doc(docId).update({
-                        'comments': FieldValue.arrayUnion([commentObj]),
-                      });
+                      await FirebaseFirestore.instance
+                          .collection('confessions')
+                          .doc(docId)
+                          .update({
+                            'comments': FieldValue.arrayUnion([commentObj]),
+                          });
                     }
                   },
                 );
@@ -492,8 +523,14 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
               context: context,
               builder: (context) => AlertDialog(
                 backgroundColor: kDarkGray,
-                title: const Text('Report Confession', style: TextStyle(color: kWhite)),
-                content: const Text('Are you sure you want to report this confession?', style: TextStyle(color: kWhite)),
+                title: const Text(
+                  'Report Confession',
+                  style: TextStyle(color: kWhite),
+                ),
+                content: const Text(
+                  'Are you sure you want to report this confession?',
+                  style: TextStyle(color: kWhite),
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
@@ -507,10 +544,13 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
               ),
             );
             if (confirm == true) {
-              await FirebaseFirestore.instance.collection('confessions').doc(docId).update({
-                'reports': FieldValue.arrayUnion([userId]),
-              });
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported.')));
+              await FirebaseFirestore.instance
+                  .collection('confessions')
+                  .doc(docId)
+                  .update({
+                    'reports': FieldValue.arrayUnion([userId]),
+                  });
+              // Report submitted silently - no notification needed
             }
           },
         ),
@@ -547,12 +587,12 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 1) return 'NOW';
     if (difference.inHours < 1) return '${difference.inMinutes}m';
     if (difference.inDays < 1) return '${difference.inHours}h';
     if (difference.inDays < 30) return '${difference.inDays}d';
-    
+
     return DateFormat('MMM d').format(timestamp);
   }
 }
