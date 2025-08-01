@@ -90,13 +90,11 @@ class UserModel {
     );
   }
 
-  // Get first name from display name
   String get firstName {
     if (displayName == null || displayName!.isEmpty) return 'User';
     return displayName!.split(' ').first;
   }
 
-  // Get department abbreviation
   String get departmentShort {
     if (department == null) return '';
 

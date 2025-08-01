@@ -50,6 +50,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
           scaffoldBackgroundColor: const Color(0xFF000000),
           primarySwatch: Colors.red,
+          primaryColor: const Color(0xFFDC2626),
           useMaterial3: true,
           // Fix page transitions to prevent grey background
           pageTransitionsTheme: const PageTransitionsTheme(
@@ -61,11 +62,45 @@ class MyApp extends StatelessWidget {
           // Set app bar theme
           appBarTheme: const AppBarTheme(
             backgroundColor: Color(0xFF000000),
+            foregroundColor: Colors.white,
             elevation: 0,
             systemOverlayStyle: SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
               statusBarIconBrightness: Brightness.light,
             ),
+          ),
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            backgroundColor: Color(0xFF1C1C1E),
+            selectedItemColor: Color(0xFFDC2626),
+            unselectedItemColor: Color(0xFF8E8E93),
+            type: BottomNavigationBarType.fixed,
+          ),
+          dialogTheme: const DialogThemeData(
+            backgroundColor: Color(0xFF1C1C1E),
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            contentTextStyle: TextStyle(color: Color(0xFF8E8E93), fontSize: 16),
+          ),
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.white),
+            bodyMedium: TextStyle(color: Colors.white),
+            bodySmall: TextStyle(color: Color(0xFF8E8E93)),
+            headlineLarge: TextStyle(color: Colors.white),
+            headlineMedium: TextStyle(color: Colors.white),
+            headlineSmall: TextStyle(color: Colors.white),
+            titleLarge: TextStyle(color: Colors.white),
+            titleMedium: TextStyle(color: Colors.white),
+            titleSmall: TextStyle(color: Colors.white),
+          ),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFFDC2626),
+            secondary: Color(0xFFDC2626),
+            surface: Color(0xFF1C1C1E),
+            background: Colors.black,
+            error: Color(0xFFFF3B30),
           ),
         ),
         home: const AuthWrapper(),

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user_model.dart';
 import '../../auth_service.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -51,17 +55,17 @@ class ProfileScreen extends StatelessWidget {
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               slivers: [
-                _buildSliverAppBar(context, user, size),
+                _buildModernSliverAppBar(context, user, size),
                 SliverToBoxAdapter(
                   child: Column(
                     children: [
-                      SizedBox(height: size.height * 0.025),
-                      _buildUserInfo(user, size),
-                      SizedBox(height: size.height * 0.04),
-                      _buildStatsSection(size),
-                      SizedBox(height: size.height * 0.05),
-                      _buildProfileSections(context, user, size),
-                      SizedBox(height: size.height * 0.15),
+                      const SizedBox(height: 24),
+                      _buildPremiumUserCard(user, size),
+                      const SizedBox(height: 32),
+                      _buildModernStatsSection(user, size),
+                      const SizedBox(height: 40),
+                      _buildModernProfileSections(context, user, size),
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),
@@ -73,66 +77,186 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context, UserModel user, Size size) {
+  Widget _buildModernSliverAppBar(
+    BuildContext context,
+    UserModel user,
+    Size size,
+  ) {
     return SliverAppBar(
-      expandedHeight: size.height * 0.25,
+      expandedHeight: 120,
       floating: false,
       pinned: true,
       backgroundColor: Colors.black,
       elevation: 0,
-      automaticallyImplyLeading: false, // Removes back button
+      automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          // The gradient has been removed and replaced with a solid color
           color: Colors.black,
           child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(height: size.height * 0.05),
-                _buildProfileAvatar(user, size),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: EdgeInsets.only(
-            right: size.width * 0.04,
-            top: size.height * 0.01,
-          ),
-          child: Material(
-            color: const Color(0xFF1C1C1E).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => _showSignOutDialog(context, size),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.logout, color: Colors.white, size: 20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      _buildModernActionButton(
+                        icon: CupertinoIcons.ellipsis_circle,
+                        onTap: () => _showOptionsBottomSheet(context, size),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildProfileAvatar(UserModel user, Size size) {
+  Widget _buildModernActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFF2C2C2E), width: 0.5),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
+      ),
+    );
+  }
+
+  Widget _buildPremiumUserCard(UserModel user, Size size) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF000000).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF2C2C2E), width: 0.5),
+      ),
+      child: Column(
+        children: [
+          // Avatar and basic info
+          Row(
+            children: [
+              _buildPremiumAvatar(user, size),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.displayName ?? 'User',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (user.department != null) ...[
+                      Text(
+                        user.departmentShort,
+                        style: const TextStyle(
+                          color: Color(0xFFDC2626),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                    Text(
+                      user.year ?? 'Academic Year Not Set',
+                      style: const TextStyle(
+                        color: Color(0xFF8E8E93),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildVerificationBadge(),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Contact info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C2C2E),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.mail_solid,
+                    color: Color(0xFFDC2626),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    user.email,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPremiumAvatar(UserModel user, Size size) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFDC2626), width: 3),
+      ),
+      padding: const EdgeInsets.all(3),
       child: CircleAvatar(
-        radius: size.width * 0.15,
+        radius: 32,
         backgroundColor: const Color(0xFF2C2C2E),
         backgroundImage: user.photoURL != null
             ? NetworkImage(user.photoURL!)
@@ -140,11 +264,11 @@ class ProfileScreen extends StatelessWidget {
         child: user.photoURL == null
             ? Text(
                 user.initials,
-                style: TextStyle(
-                  fontSize: size.width * 0.12,
+                style: const TextStyle(
+                  fontSize: 24,
                   color: Colors.white,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 1,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               )
             : null,
@@ -152,204 +276,206 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUserInfo(UserModel user, Size size) {
-    String displayName = user.displayName ?? 'No Name';
-    if (displayName.length > 20) {
-      displayName = '${displayName.substring(0, 18)}...';
-    }
-
-    return Column(
-      children: [
-        Text(
-          displayName,
-          style: TextStyle(
-            fontSize: size.width * 0.07,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: -0.5,
-          ),
+  Widget _buildVerificationBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF34C759).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF34C759).withOpacity(0.3),
+          width: 0.5,
         ),
-        SizedBox(height: size.height * 0.01),
-        Text(
-          '@${user.username ?? 'no_username'}',
-          style: TextStyle(
-            fontSize: size.width * 0.04,
-            color: const Color(0xFF8E8E93),
-            fontWeight: FontWeight.w400,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(
+            CupertinoIcons.checkmark_seal_fill,
+            color: Color(0xFF34C759),
+            size: 12,
           ),
-        ),
-        if (user.department != null || user.year != null) ...[
-          SizedBox(height: size.height * 0.015),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: size.width * 0.04,
-              vertical: size.height * 0.007,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '${user.departmentShort} • ${user.year ?? ''}'.trim(),
-              style: TextStyle(
-                fontSize: size.width * 0.035,
-                color: const Color(0xFF8E8E93),
-                fontWeight: FontWeight.w500,
-              ),
+          SizedBox(width: 4),
+          Text(
+            'Verified',
+            style: TextStyle(
+              color: Color(0xFF34C759),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildStatsSection(Size size) {
+  Widget _buildModernStatsSection(UserModel user, Size size) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: size.width * 0.05),
-      padding: EdgeInsets.symmetric(vertical: size.height * 0.03),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: FutureBuilder<int>(
+              future: _getMatchesCount(user.uid),
+              builder: (context, snapshot) {
+                return _buildModernStatCard(
+                  title: 'Matches',
+                  value: snapshot.data?.toString() ?? '0',
+                  icon: CupertinoIcons.person_2_alt,
+                  color: const Color(0xFFDC2626),
+                  size: size,
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FutureBuilder<int>(
+              future: _getConfessionsCount(user.uid),
+              builder: (context, snapshot) {
+                return _buildModernStatCard(
+                  title: 'Confessions',
+                  value: snapshot.data?.toString() ?? '0',
+                  icon: CupertinoIcons.chat_bubble_text_fill,
+                  color: const Color(0xFFDC2626),
+                  size: size,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Size size,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2C2C2E), width: 0.5),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
         children: [
-          _buildStatItem('0', 'Meetups', Icons.people_outline, size),
           Container(
-            height: size.height * 0.05,
-            width: 1,
-            color: const Color(0xFF2C2C2E),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          _buildStatItem('0', 'Vents', Icons.chat_bubble_outline, size),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF8E8E93),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String value, String label, IconData icon, Size size) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: const Color(0xFFDC2626), // Changed to red theme
-          size: size.width * 0.06,
-        ),
-        SizedBox(height: size.height * 0.01),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: size.width * 0.06,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        SizedBox(height: size.height * 0.005),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: size.width * 0.032,
-            color: const Color(0xFF8E8E93),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileSections(
+  Widget _buildModernProfileSections(
     BuildContext context,
     UserModel user,
     Size size,
   ) {
     return Column(
       children: [
-        _buildSection(
-          size: size,
-          title: 'Account Information',
+        _buildModernSection(
+          title: 'Quick Actions',
           children: [
-            _buildProfileOption(
-              size: size,
-              icon: Icons.mail_outline,
-              title: 'Email',
-              subtitle: user.email,
-              showArrow: false,
-            ),
-            _buildProfileOption(
-              size: size,
-              icon: Icons.school_outlined,
-              title: 'Department',
-              subtitle: user.department ?? 'Not set',
-              showArrow: false,
-            ),
-            _buildProfileOption(
-              size: size,
-              icon: Icons.calendar_today_outlined,
-              title: 'Academic Year',
-              subtitle: user.year ?? 'Not set',
-              showArrow: false,
-            ),
-          ],
-        ),
-        SizedBox(height: size.height * 0.04),
-        _buildSection(
-          size: size,
-          title: 'Settings',
-          children: [
-            _buildProfileOption(
-              size: size,
-              icon: Icons.edit_outlined,
+            _buildModernOptionTile(
+              icon: CupertinoIcons.pencil_circle_fill,
               title: 'Edit Profile',
               subtitle: 'Update your information',
-              showArrow: true,
+              color: const Color(0xFFDC2626),
               onTap: () {
-                /* TODO: Navigate to edit profile screen */
+                HapticFeedback.lightImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const EditProfileScreen(),
+                  ),
+                );
               },
             ),
-            _buildProfileOption(
-              size: size,
-              icon: Icons.notifications_outlined,
+            _buildModernOptionTile(
+              icon: CupertinoIcons.bell_circle_fill,
               title: 'Notifications',
               subtitle: 'Manage your preferences',
-              showArrow: true,
+              color: const Color(0xFFDC2626),
               onTap: () {
-                /* TODO: Navigate to notifications settings */
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to notifications
               },
             ),
-            _buildProfileOption(
-              size: size,
-              icon: Icons.privacy_tip_outlined,
-              title: 'Privacy',
+            _buildModernOptionTile(
+              icon: CupertinoIcons.shield_lefthalf_fill,
+              title: 'Privacy & Security',
               subtitle: 'Control your data',
-              showArrow: true,
+              color: const Color(0xFFDC2626),
               onTap: () {
-                /* TODO: Navigate to privacy settings */
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to privacy
               },
             ),
           ],
         ),
-        SizedBox(height: size.height * 0.04),
-        _buildSection(
-          size: size,
-          title: 'Support',
+        const SizedBox(height: 32),
+        _buildModernSection(
+          title: 'Support & Info',
           children: [
-            _buildProfileOption(
-              size: size,
-              icon: Icons.help_outline,
+            _buildModernOptionTile(
+              icon: CupertinoIcons.question_circle_fill,
               title: 'Help & Support',
               subtitle: 'Get assistance',
-              showArrow: true,
+              color: const Color(0xFFDC2626),
               onTap: () {
-                /* TODO: Navigate to help */
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to help
               },
             ),
-            _buildProfileOption(
-              size: size,
-              icon: Icons.logout_outlined,
+            _buildModernOptionTile(
+              icon: CupertinoIcons.info_circle_fill,
+              title: 'About',
+              subtitle: 'App information',
+              color: const Color(0xFFDC2626),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to about
+              },
+            ),
+            _buildModernOptionTile(
+              icon: CupertinoIcons.power,
               title: 'Sign Out',
-              subtitle: 'Log out of your account',
-              showArrow: false,
-              isDestructive: true,
-              onTap: () => _showSignOutDialog(context, size),
+              subtitle: 'Logout from your account',
+              color: const Color(0xFFFF3B30),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _showSignOutDialog(context, size);
+              },
             ),
           ],
         ),
@@ -357,109 +483,196 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection({
-    required Size size,
+  Widget _buildModernSection({
     required String title,
     required List<Widget> children,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: size.width * 0.05,
-            vertical: size.height * 0.01,
-          ),
-          child: Text(
-            title.toUpperCase(),
-            style: TextStyle(
-              fontSize: size.width * 0.032,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF8E8E93),
-              letterSpacing: 0.5,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              title.toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFF8E8E93),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-        ),
-        Container(
-          margin: EdgeInsets.symmetric(horizontal: size.width * 0.05),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1E),
-            borderRadius: BorderRadius.circular(16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF2C2C2E), width: 0.5),
+            ),
+            child: Column(children: children),
           ),
-          child: Column(children: children),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildProfileOption({
-    required Size size,
+  Widget _buildModernOptionTile({
     required IconData icon,
     required String title,
     required String subtitle,
-    bool showArrow = false,
-    bool isDestructive = false,
-    VoidCallback? onTap,
+    required Color color,
+    required VoidCallback onTap,
   }) {
-    final Color iconColor = isDestructive
-        ? const Color(0xFFFF453A)
-        : const Color(0xFFDC2626); // Changed to red theme
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: size.width * 0.05,
-            vertical: size.height * 0.02,
-          ),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
-                width: size.width * 0.08,
-                height: size.width * 0.08,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: iconColor, size: size.width * 0.045),
+                child: Icon(icon, color: color, size: 22),
               ),
-              SizedBox(width: size.width * 0.04),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        color: isDestructive ? iconColor : Colors.white,
-                        fontSize: size.width * 0.04,
-                        fontWeight: FontWeight.w500,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: size.height * 0.0025),
+                    const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: const Color(0xFF8E8E93),
-                        fontSize: size.width * 0.035,
-                        fontWeight: FontWeight.w400,
+                      style: const TextStyle(
+                        color: Color(0xFF8E8E93),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              if (showArrow)
-                Icon(
-                  Icons.chevron_right,
-                  color: const Color(0xFF8E8E93),
-                  size: size.width * 0.05,
-                ),
+              const Icon(
+                CupertinoIcons.chevron_right,
+                color: Color(0xFF8E8E93),
+                size: 16,
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<int> _getMatchesCount(String userId) async {
+    try {
+      final matchesSnapshot = await FirebaseFirestore.instance
+          .collection('matches')
+          .where('participants', arrayContains: userId)
+          .get();
+      return matchesSnapshot.docs.length;
+    } catch (e) {
+      print('Error getting matches count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _getConfessionsCount(String userId) async {
+    try {
+      final confessionsSnapshot = await FirebaseFirestore.instance
+          .collection('confessions')
+          .where('userId', isEqualTo: userId)
+          .get();
+      return confessionsSnapshot.docs.length;
+    } catch (e) {
+      print('Error getting confessions count: $e');
+      return 0;
+    }
+  }
+
+  void _showOptionsBottomSheet(BuildContext context, Size size) {
+    showCupertinoModalPopup(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (BuildContext context) => CupertinoActionSheet(
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              HapticFeedback.lightImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const EditProfileScreen(),
+                ),
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(
+                  CupertinoIcons.pencil_circle,
+                  color: Color(0xFFDC2626),
+                  size: 18,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Edit Profile',
+                  style: TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              HapticFeedback.lightImpact();
+              _showSignOutDialog(context, size);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.power, color: Color(0xFFFF3B30), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    color: Color(0xFFFF3B30),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(
+              color: Color(0xFFDC2626),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -621,5 +834,285 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context, Size size) async {
+    final TextEditingController deleteController = TextEditingController();
+    bool isDeleting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1C1C1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_rounded,
+                color: const Color(0xFFFF453A),
+                size: size.width * 0.06,
+              ),
+              SizedBox(width: size.width * 0.03),
+              Text(
+                'Delete Account',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: size.width * 0.045,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: size.width * 0.8,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'This action cannot be undone. All your data will be permanently deleted, including:',
+                    style: TextStyle(
+                      color: const Color(0xFF8E8E93),
+                      fontSize: size.width * 0.038,
+                      height: 1.4,
+                    ),
+                  ),
+                  SizedBox(height: size.height * 0.015),
+                  ...[
+                    '• Profile information',
+                    '• Match history',
+                    '• Messages and conversations',
+                    '• All app data',
+                  ].map(
+                    (item) => Padding(
+                      padding: EdgeInsets.only(bottom: size.height * 0.005),
+                      child: Text(
+                        item,
+                        style: TextStyle(
+                          color: const Color(0xFF8E8E93),
+                          fontSize: size.width * 0.035,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: size.height * 0.02),
+                  Text(
+                    'Type "DELETE" to confirm:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: size.width * 0.04,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: size.height * 0.015),
+                  TextField(
+                    controller: deleteController,
+                    keyboardAppearance: Brightness.dark,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: size.width * 0.04,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Type DELETE here',
+                      hintStyle: TextStyle(
+                        color: const Color(0xFF8E8E93),
+                        fontSize: size.width * 0.038,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF2C2C2E),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.04,
+                        vertical: size.height * 0.015,
+                      ),
+                    ),
+                    onChanged: (value) => setState(() {}),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isDeleting
+                  ? null
+                  : () {
+                      Navigator.of(context).pop();
+                    },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.05,
+                  vertical: size.height * 0.015,
+                ),
+              ),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: isDeleting ? const Color(0xFF48484A) : Colors.white,
+                  fontWeight: FontWeight.w500,
+                  fontSize: size.width * 0.04,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed:
+                  (isDeleting || deleteController.text.trim() != 'DELETE')
+                  ? null
+                  : () async {
+                      setState(() => isDeleting = true);
+
+                      try {
+                        await _deleteUserAccount(context);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      } catch (e) {
+                        setState(() => isDeleting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to delete account: $e'),
+                              backgroundColor: const Color(0xFFFF453A),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.05,
+                  vertical: size.height * 0.015,
+                ),
+              ),
+              child: isDeleting
+                  ? SizedBox(
+                      width: size.width * 0.04,
+                      height: size.width * 0.04,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Color(0xFFFF453A)),
+                      ),
+                    )
+                  : Text(
+                      'Delete Forever',
+                      style: TextStyle(
+                        color: deleteController.text.trim() == 'DELETE'
+                            ? const Color(0xFFFF453A)
+                            : const Color(0xFF48484A),
+                        fontWeight: FontWeight.w600,
+                        fontSize: size.width * 0.04,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteUserAccount(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userProvider = context.read<UserProvider>();
+    final firestore = FirebaseFirestore.instance;
+
+    try {
+      // Show haptic feedback
+      HapticFeedback.mediumImpact();
+
+      // Delete user data from all collections
+      final batch = firestore.batch();
+
+      // Delete user profile
+      batch.delete(firestore.collection('users').doc(user.uid));
+
+      // Delete all matching queue entries
+      final queueDocs = await firestore
+          .collection('matchingQueue')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+      for (final doc in queueDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete all matches (where user is a participant)
+      final matchesDocs = await firestore
+          .collection('matches')
+          .where('users', arrayContains: user.uid)
+          .get();
+      for (final doc in matchesDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete all comments by this user
+      final commentsDocs = await firestore
+          .collection('comments')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+      for (final doc in commentsDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete all confessions by this user
+      final confessionsDocs = await firestore
+          .collection('confessions')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+      for (final doc in confessionsDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete all posts by this user
+      final postsDocs = await firestore
+          .collection('posts')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+      for (final doc in postsDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Commit all deletions
+      await batch.commit();
+
+      // Clear user provider
+      userProvider.clearUser();
+
+      // Delete Firebase Auth account (this will sign out automatically)
+      await user.delete();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Account deleted successfully'),
+            backgroundColor: const Color(0xFF32D74B),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // If Firebase Auth deletion fails, the user might need to re-authenticate
+      if (e.toString().contains('requires-recent-login')) {
+        throw Exception(
+          'Please sign out and sign back in, then try deleting your account again.',
+        );
+      }
+      throw Exception('Failed to delete account: $e');
+    }
   }
 }
