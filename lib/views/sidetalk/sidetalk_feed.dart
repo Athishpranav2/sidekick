@@ -593,7 +593,10 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(), // iOS-style bouncing
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ), // iOS-style bouncing with better performance
+        cacheExtent: 1000, // Cache more items for smoother scrolling
         slivers: [
           // iOS-style navigation bar
           SliverAppBar(
@@ -629,25 +632,37 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                     bottom: 100, // Space for FAB
                   ),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final currentPost = filteredPosts[index];
-                      return Container(
-                        margin: EdgeInsets.only(
-                          bottom: index == filteredPosts.length - 1 ? 0 : 1,
-                        ),
-                        child: PostCard(
-                          post: currentPost,
-                          likedByMe: likedPosts.contains(currentPost.id),
-                          onLike: () {
-                            HapticFeedback.lightImpact();
-                            _toggleLike(currentPost.id);
-                          },
-                          onReport: () {
-                            _showReportSheet(currentPost);
-                          },
-                        ),
-                      );
-                    }, childCount: filteredPosts.length),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final currentPost = filteredPosts[index];
+                        
+                        // Optimized post card with RepaintBoundary for smooth scrolling
+                        return RepaintBoundary(
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              bottom: index == filteredPosts.length - 1 ? 0 : 1,
+                            ),
+                            child: PostCard(
+                              key: ValueKey(currentPost.id), // Stable key for performance
+                              post: currentPost,
+                              likedByMe: likedPosts.contains(currentPost.id),
+                              onLike: () {
+                                HapticFeedback.lightImpact();
+                                _toggleLike(currentPost.id);
+                              },
+                              onReport: () {
+                                _showReportSheet(currentPost);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: filteredPosts.length,
+                      // Performance optimizations for smooth scrolling
+                      addAutomaticKeepAlives: false, // Don't keep widgets alive - saves memory
+                      addRepaintBoundaries: true,    // Better rendering performance
+                      addSemanticIndexes: false,     // Reduce overhead
+                    ),
                   ),
                 ),
         ],

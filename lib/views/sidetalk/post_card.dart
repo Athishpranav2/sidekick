@@ -4,7 +4,7 @@ import '../../models/post.dart';
 import '../../core/constants/app_colors.dart';
 import 'post_detail_screen.dart';
 
-class PostCard extends StatefulWidget {
+class PostCard extends StatelessWidget {
   final Post post;
   final bool likedByMe;
   final VoidCallback? onLike;
@@ -20,16 +20,9 @@ class PostCard extends StatefulWidget {
     this.onReport,
   });
 
-  @override
-  State<PostCard> createState() => _PostCardState();
-}
-
-class _PostCardState extends State<PostCard> {
-  bool _isPressed = false;
-
   // iOS-style avatar with proper sizing
   Widget _buildAvatar() {
-    if (widget.post.isAnonymous) {
+    if (post.isAnonymous) {
       return Container(
         width: AppSpacing.avatarMedium,
         height: AppSpacing.avatarMedium,
@@ -45,8 +38,8 @@ class _PostCardState extends State<PostCard> {
         ),
       );
     } else {
-      String displayText = widget.post.username != null
-          ? widget.post.username!.substring(0, 1).toUpperCase()
+      String displayText = post.username != null
+          ? post.username!.substring(0, 1).toUpperCase()
           : 'U';
 
       return Container(
@@ -83,9 +76,9 @@ class _PostCardState extends State<PostCard> {
 
   // Twitter-style metadata with proper hierarchy
   Widget _buildHeader() {
-    String displayName = widget.post.isAnonymous
+    String displayName = post.isAnonymous
         ? 'Anonymous'
-        : widget.post.username ?? 'User';
+        : post.username ?? 'User';
 
     return Row(
       children: [
@@ -107,7 +100,7 @@ class _PostCardState extends State<PostCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (!widget.post.isAnonymous) ...[
+                  if (!post.isAnonymous) ...[
                     const SizedBox(width: AppSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -132,7 +125,7 @@ class _PostCardState extends State<PostCard> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${widget.post.timestamp} ago',
+                '${post.timestamp} ago',
                 style: AppTypography.footnote.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -146,24 +139,21 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _isPressed = true);
-        HapticFeedback.selectionClick();
-      },
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: () => _navigateToDetail(),
-      child: AnimatedContainer(
-        duration: AppAnimations.fast,
-        transform: Matrix4.identity()..scale(_isPressed ? 0.98 : 1.0),
+    return Material(
+      color: AppColors.cardBackground,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          _navigateToDetail(context);
+        },
+        splashColor: AppColors.primary.withOpacity(0.1),
+        highlightColor: AppColors.primary.withOpacity(0.05),
         child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
           ),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground,
             border: Border(
               bottom: BorderSide(color: AppColors.separator, width: 0.5),
             ),
@@ -178,7 +168,7 @@ class _PostCardState extends State<PostCard> {
 
               // Post content with proper typography
               Text(
-                widget.post.content,
+                post.content,
                 style: AppTypography.body.copyWith(
                   color: AppColors.textPrimary,
                   height: 1.4,
@@ -194,15 +184,15 @@ class _PostCardState extends State<PostCard> {
                   Row(
                     children: [
                       _buildActionButton(
-                        icon: widget.likedByMe
+                        icon: likedByMe
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        count: widget.post.likes,
-                        isActive: widget.likedByMe,
+                        count: post.likes,
+                        isActive: likedByMe,
                         activeColor: AppColors.systemRed,
                         onTap: () {
                           HapticFeedback.lightImpact();
-                          widget.onLike?.call();
+                          onLike?.call();
                         },
                       ),
 
@@ -210,11 +200,11 @@ class _PostCardState extends State<PostCard> {
 
                       _buildActionButton(
                         icon: Icons.mode_comment_outlined,
-                        count: widget.post.comments,
+                        count: post.comments,
                         activeColor: AppColors.systemBlue,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          _navigateToDetail();
+                          _navigateToDetail(context);
                         },
                       ),
                     ],
@@ -226,7 +216,7 @@ class _PostCardState extends State<PostCard> {
                     activeColor: AppColors.systemOrange,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      widget.onReport?.call();
+                      onReport?.call();
                     },
                   ),
                 ],
@@ -282,13 +272,12 @@ class _PostCardState extends State<PostCard> {
   }
 
   // iOS-style navigation to detail screen
-  void _navigateToDetail() {
-    HapticFeedback.selectionClick();
+  void _navigateToDetail(BuildContext context) {
     Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            PostDetailScreen(post: widget.post),
+            PostDetailScreen(post: post),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
             position:

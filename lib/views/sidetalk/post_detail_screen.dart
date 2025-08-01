@@ -24,14 +24,10 @@ class _PostDetailScreenState extends State<PostDetailScreen>
   late AnimationController _inputAnimationController;
   late Animation<double> _inputAnimation;
 
-  bool get _hasInputText => _commentController.text.trim().isNotEmpty;
-
   @override
   void initState() {
     super.initState();
-    _commentController.addListener(() {
-      setState(() {}); // Rebuild to update send button state
-    });
+    // Remove the setState listener - we'll use ValueListenableBuilder instead
 
     // Initialize animation controller
     _inputAnimationController = AnimationController(
@@ -78,30 +74,100 @@ class _PostDetailScreenState extends State<PostDetailScreen>
     super.dispose();
   }
 
-  void _sendComment() async {
-    if (_hasInputText && !_isLoading) {
-      HapticFeedback.mediumImpact();
-      setState(() {
-        _isLoading = true;
-      });
+  // Isolated send button with no external rebuilds
+  Widget _buildSendButton() {
+    return StatefulBuilder(
+      builder: (context, setButtonState) {
+        return ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _commentController,
+          builder: (context, textValue, child) {
+            final hasText = textValue.text.trim().isNotEmpty;
+            
+            return AnimatedScale(
+              scale: _isCommentFocused ? 1.1 : 1.0,
+              duration: AppAnimations.fast,
+              child: GestureDetector(
+                onTap: (hasText && !_isLoading)
+                    ? () async {
+                        HapticFeedback.mediumImpact();
+                        setButtonState(() {
+                          _isLoading = true;
+                        });
 
-      final success = await CommentService.addComment(
-        postId: widget.post.id,
-        content: _commentController.text.trim(),
-        isAnonymous: false, // For now, always post as named user
-      );
+                        final success = await CommentService.addComment(
+                          postId: widget.post.id,
+                          content: textValue.text.trim(),
+                          isAnonymous: false,
+                        );
 
-      setState(() {
-        _isLoading = false;
-      });
+                        setButtonState(() {
+                          _isLoading = false;
+                        });
 
-      if (success) {
-        HapticFeedback.lightImpact();
-        _commentController.clear();
-      } else {
-        HapticFeedback.heavyImpact();
-      }
-    }
+                        if (success) {
+                          HapticFeedback.lightImpact();
+                          _commentController.clear();
+                        } else {
+                          HapticFeedback.heavyImpact();
+                        }
+                      }
+                    : null,
+                child: Container(
+                  padding: EdgeInsets.all(
+                    _isCommentFocused ? AppSpacing.md : AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: (hasText && !_isLoading)
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primaryDark,
+                            ],
+                          )
+                        : null,
+                    color: (hasText && !_isLoading)
+                        ? null
+                        : AppColors.tertiaryBackground,
+                    borderRadius: BorderRadius.circular(
+                      _isCommentFocused
+                          ? AppSpacing.radiusLarge
+                          : AppSpacing.radiusButton,
+                    ),
+                    boxShadow: (hasText && !_isLoading && _isCommentFocused)
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          Icons.send_rounded,
+                          color: (hasText && !_isLoading)
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          size: _isCommentFocused ? 22 : 18,
+                        ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -648,73 +714,9 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    // Perfect send button
-                    AnimatedScale(
-                      scale: _isCommentFocused ? 1.1 : 1.0,
-                      duration: AppAnimations.fast,
-                      child: GestureDetector(
-                        onTap: (_hasInputText && !_isLoading)
-                            ? () {
-                                HapticFeedback.mediumImpact();
-                                _sendComment();
-                              }
-                            : null,
-                        child: Container(
-                          padding: EdgeInsets.all(
-                            _isCommentFocused ? AppSpacing.md : AppSpacing.sm,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: (_hasInputText && !_isLoading)
-                                ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.primary,
-                                      AppColors.primaryDark,
-                                    ],
-                                  )
-                                : null,
-                            color: (_hasInputText && !_isLoading)
-                                ? null
-                                : AppColors.tertiaryBackground,
-                            borderRadius: BorderRadius.circular(
-                              _isCommentFocused
-                                  ? AppSpacing.radiusLarge
-                                  : AppSpacing.radiusButton,
-                            ),
-                            boxShadow:
-                                (_hasInputText &&
-                                    !_isLoading &&
-                                    _isCommentFocused)
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : [],
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.send_rounded,
-                                  color: (_hasInputText && !_isLoading)
-                                      ? Colors.white
-                                      : AppColors.textSecondary,
-                                  size: _isCommentFocused ? 22 : 18,
-                                ),
-                        ),
-                      ),
-                    ),
+                                        const SizedBox(width: AppSpacing.md),
+                    // Fully isolated send button - no rebuilds during typing
+                    _buildSendButton(),
                   ],
                 ),
               ),
