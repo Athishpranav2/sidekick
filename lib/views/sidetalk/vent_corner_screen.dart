@@ -7,12 +7,14 @@ import 'package:sidekick/views/compose/compose_screen.dart';
 import 'package:sidekick/views/sidetalk/filter_button.dart';
 import 'package:sidekick/views/sidetalk/post_card.dart';
 import 'package:sidekick/models/post.dart';
-import 'package:sidekick/views/vent_corner/comment_thread_modal.dart';
+import 'package:sidekick/views/sidetalk/comment_thread_modal.dart';
 
 // ========== STYLE CONSTANTS ==========
 const Color kBlack = Colors.black;
 const Color kWhite = Colors.white;
-const Color kRed = Color(0xFFDC2626);
+const Color kRed = Color(
+  0xFFE53E3E,
+); // Softer red for better Android experience
 const Color kGray = Color(0xFF8E8E93);
 const Color kDarkGray = Color(0xFF1E1E1E);
 
@@ -408,6 +410,7 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
       content: text,
       isAnonymous: isAnonymous,
       username: username,
+      gender: null, // Add missing gender parameter
       timestamp: _formatTimestamp(timestamp),
       likes: likes,
       comments: comments,

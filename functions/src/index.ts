@@ -606,3 +606,9 @@ export const autoCloseMatches = onSchedule(
     }
   }
 );
+
+// Export feed algorithm functions
+export * from './feedAlgorithm';
+
+// Export analytics functions  
+export * from './analytics';

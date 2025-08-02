@@ -26,7 +26,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FocusNode _textFieldFocus = FocusNode();
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   late AnimationController _sendButtonController;
   late Animation<double> _sendButtonAnimation;
@@ -58,7 +57,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   static const Color primaryRed = Color(0xFFFF3B30);
   static const Color darkRed = Color(0xFFD70015);
   static const Color backgroundBlack = Color(0xFF000000);
-  static const Color cardBackground = Color(0xFF1C1C1E);
   static const Color inputBackground = Color(0xFF2C2C2E);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8E8E93);
@@ -199,7 +197,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       meetingTime.minute,
     );
 
-    if (_meetingDateTime!.isBefore(now)) {
+    // Calculate potential chat end time for today
+    final todaysChatEndTime = _meetingDateTime!.add(
+      const Duration(minutes: 30),
+    );
+
+    // Only move to next day if the entire chat session (including 30-min buffer) has passed
+    if (todaysChatEndTime.isBefore(now)) {
       _meetingDateTime = _meetingDateTime!.add(const Duration(days: 1));
     }
 
@@ -241,10 +245,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } else {
       _chatState = ChatState.expired;
       _remainingTime = Duration.zero;
+      // Only delete messages once when transitioning to expired state
       if (previousState != ChatState.expired) {
         _deleteAllMessages();
       }
     }
+
+    // Debug information (remove in production)
+    debugPrint('Chat State Debug:');
+    debugPrint('Current time: $now');
+    debugPrint('Meeting time: $_meetingDateTime');
+    debugPrint('Unlock time: $_chatUnlockTime');
+    debugPrint('End time: $_chatEndTime');
+    debugPrint('Current state: $_chatState');
+    debugPrint('Remaining time: $_remainingTime');
+    debugPrint('---');
   }
 
   void _startCountdownTimer() {
@@ -278,9 +293,25 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'chatExpired': true,
         'chatExpiredAt': FieldValue.serverTimestamp(),
       });
+
+      // Schedule next chat session
+      _scheduleNextChatSession();
     } catch (e) {
-      print('Error deleting messages: $e');
+      debugPrint('Error deleting messages: $e');
     }
+  }
+
+  void _scheduleNextChatSession() {
+    // Move meeting to next day and recalculate timing
+    _meetingDateTime = _meetingDateTime!.add(const Duration(days: 1));
+    _chatUnlockTime = _meetingDateTime!.subtract(const Duration(minutes: 5));
+    _chatEndTime = _meetingDateTime!.add(const Duration(minutes: 30));
+
+    // Reset to locked state for next session
+    _chatState = ChatState.locked;
+    _updateChatState();
+
+    debugPrint('Next chat session scheduled for: $_meetingDateTime');
   }
 
   @override

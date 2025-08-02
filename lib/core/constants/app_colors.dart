@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 /// iOS Native Premium Design System - Twitter-inspired
 /// Sophisticated dark theme with proper iOS aesthetics
 class AppColors {
-  // Primary brand colors - refined red
-  static const Color primary = Color(0xFFFF3B30); // iOS red
-  static const Color primaryLight = Color(0xFFFF6961); // Lighter red
-  static const Color primaryDark = Color(0xFFD70015); // Darker red
+  // Primary brand colors - softer red for better Android experience
+  static const Color primary = Color(0xFFE53E3E); // Softer red
+  static const Color primaryLight = Color(0xFFF56565); // Lighter soft red
+  static const Color primaryDark = Color(0xFFC53030); // Darker soft red
 
   // iOS Dark theme backgrounds
   static const Color background = Color(0xFF000000); // Pure black
@@ -27,7 +27,7 @@ class AppColors {
   static const Color textQuaternary = Color(0xFF2C2C2E); // Quaternary text
 
   // iOS semantic colors
-  static const Color systemRed = Color(0xFFFF3B30);
+  static const Color systemRed = Color(0xFFE53E3E); // Softer red
   static const Color systemBlue = Color(0xFF007AFF);
   static const Color systemGreen = Color(0xFF34C759);
   static const Color systemOrange = Color(0xFFFF9500);
@@ -42,7 +42,7 @@ class AppColors {
 
   // iOS interactive states
   static const Color link = Color(0xFF007AFF); // iOS link blue
-  static const Color destructive = Color(0xFFFF3B30); // Destructive actions
+  static const Color destructive = Color(0xFFE53E3E); // Softer destructive red
 
   // Shadows and elevation - Enhanced for ultra premium look
   static const Color shadow = Color(0x40000000); // Enhanced shadow

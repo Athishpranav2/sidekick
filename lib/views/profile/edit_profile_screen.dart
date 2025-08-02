@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../../core/constants/app_colors.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -206,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     : const Text(
                         'Done',
                         style: TextStyle(
-                          color: Color(0xFFDC2626),
+                          color: AppColors.systemRed,
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                         ),
@@ -534,7 +535,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     trailing: isSelected
                         ? const Icon(
                             CupertinoIcons.checkmark,
-                            color: Color(0xFFDC2626),
+                            color: AppColors.systemRed,
                             size: 20,
                           )
                         : null,
@@ -614,7 +615,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: const Text(
                       'Done',
                       style: TextStyle(
-                        color: Color(0xFFDC2626),
+                        color: AppColors.systemRed,
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                       ),

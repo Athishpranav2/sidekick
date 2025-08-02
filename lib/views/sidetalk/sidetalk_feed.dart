@@ -7,6 +7,8 @@ import 'post_card.dart';
 import '../../models/post.dart';
 import '../../models/filter_options.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/cloud_feed_service.dart';
+
 import '../compose/compose_screen.dart';
 
 class SidetalkFeed extends StatefulWidget {
@@ -22,10 +24,22 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   FilterState currentFilter = const FilterState();
   PostTypeFilter postTypeFilter = PostTypeFilter.all;
 
-  // Simple tracking of liked posts
+  // Enhanced feed state management
   Set<String> likedPosts = <String>{};
   List<Post> posts = [];
   bool isLoading = true;
+  bool isRefreshing = false;
+  bool isLoadingMore = false;
+  bool hasMorePosts = true;
+  DocumentSnapshot? lastDocument;
+
+  // Feed mode management
+  FeedMode currentFeedMode = FeedMode.algorithmic;
+  DateTime? lastRefreshTime;
+
+  // Admin functionality
+  bool isAdmin = false;
+  bool showAdminPanel = false;
 
   // Card colors for posts
   final List<Color> cardColors = [
@@ -39,8 +53,9 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   @override
   void initState() {
     super.initState();
+    _initializeAdmin();
     _loadLikedPosts();
-    _listenToPosts();
+    _loadInitialFeed();
   }
 
   void _loadLikedPosts() async {
@@ -58,7 +73,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         likedPosts = querySnapshot.docs.map((doc) => doc.id).toSet();
       });
     } catch (e) {
-      print('Error loading liked posts: $e');
+      debugPrint('Error loading liked posts: $e');
       // If the query fails (due to old schema), just start with empty liked posts
       setState(() {
         likedPosts = <String>{};
@@ -66,108 +81,178 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  void _listenToPosts() {
-    FirebaseFirestore.instance
-        .collection('confessions')
-        .orderBy('timestamp', descending: true)
-        .limit(50) // Limit to recent 50 posts for performance
-        .snapshots()
-        .listen((snapshot) {
-          if (mounted) {
-            setState(() {
-              posts = snapshot.docs
-                  .where((doc) {
-                    final data = doc.data();
-                    // Filter approved posts in the app to avoid compound index
-                    return data['status'] == 'approved';
-                  })
-                  .map((doc) {
-                    final data = doc.data();
-                    return _confessionToPost(doc.id, data);
-                  })
-                  .toList();
-              isLoading = false;
-            });
-          }
-        })
-        .onError((error) {
-          print('Error listening to posts: $error');
-          if (mounted) {
-            setState(() {
-              isLoading = false;
-            });
-          }
-        });
+  /// Initialize admin status
+  Future<void> _initializeAdmin() async {
+    setState(() {
+      isAdmin = false; // Temporarily disabled
+    });
   }
 
-  Post _confessionToPost(String docId, Map<String, dynamic> data) {
-    final timestamp =
-        (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+  /// Load initial feed with cloud algorithmic ranking
+  Future<void> _loadInitialFeed() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
 
-    // Handle likes - can be either array (new) or int (old schema)
-    int likesCount;
-    final likesData = data['likes'];
-    if (likesData is List) {
-      // New schema: array of user IDs
-      final likes = List<String>.from(
-        likesData.where((item) => item != null).map((item) => item.toString()),
+      final response = await CloudFeedService.getFeed(
+        mode: currentFeedMode,
+        pageSize: 20,
       );
-      likesCount = likes.length;
 
-      // Update local liked posts tracking for current user
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null && likes.contains(user.uid)) {
-        likedPosts.add(docId);
-      } else {
-        likedPosts.remove(docId);
+      if (mounted) {
+        setState(() {
+          posts = response.posts;
+          isLoading = false;
+          lastRefreshTime = DateTime.now();
+          hasMorePosts = response.hasMore;
+        });
       }
-    } else if (likesData is int) {
-      // Old schema: direct count
-      likesCount = likesData;
-    } else {
-      // Default case
-      likesCount = 0;
+    } catch (e) {
+      debugPrint('Error loading initial feed: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        _showErrorSnackBar('Failed to load feed. Please try again.');
+      }
     }
+  }
 
-    // Handle comments - can be either array (new) or int (old schema)
-    int commentsCount;
-    final commentsData = data['comments'];
-    if (commentsData is List) {
-      // New schema: array of comment objects
-      final comments = List.from(commentsData.where((item) => item != null));
-      commentsCount = comments.length;
-    } else if (commentsData is int) {
-      // Old schema: direct count
-      commentsCount = commentsData;
-    } else {
-      // Default case
-      commentsCount = 0;
+  /// Refresh feed with pull-to-refresh
+  Future<void> _refreshFeed() async {
+    if (isRefreshing) return;
+
+    try {
+      setState(() {
+        isRefreshing = true;
+      });
+
+      final response = await CloudFeedService.getFeed(
+        mode: currentFeedMode,
+        pageSize: 20,
+        forceRefresh: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          posts = response.posts;
+          isRefreshing = false;
+          lastRefreshTime = DateTime.now();
+          hasMorePosts = response.hasMore;
+        });
+
+        HapticFeedback.lightImpact();
+        _showSuccessSnackBar('Feed refreshed');
+      }
+    } catch (e) {
+      debugPrint('Error refreshing feed: $e');
+      if (mounted) {
+        setState(() {
+          isRefreshing = false;
+        });
+        _showErrorSnackBar('Failed to refresh feed');
+      }
     }
+  }
 
-    return Post(
-      id: docId,
-      content: data['text'] ?? '',
-      isAnonymous: data['isAnonymous'] ?? true,
-      username: data['username'],
-      timestamp: _formatTimestamp(timestamp),
-      likes: likesCount,
-      comments: commentsCount,
-      cardColor: cardColors[docId.hashCode % cardColors.length],
+  /// Load more posts for pagination
+  Future<void> _loadMorePosts() async {
+    if (isLoadingMore || !hasMorePosts) return;
+
+    try {
+      setState(() {
+        isLoadingMore = true;
+      });
+
+      final lastPostId = posts.isNotEmpty ? posts.last.id : null;
+      final response = await CloudFeedService.getFeed(
+        mode: currentFeedMode,
+        pageSize: 20,
+        lastPostId: lastPostId,
+      );
+
+      if (mounted) {
+        setState(() {
+          posts.addAll(response.posts);
+          isLoadingMore = false;
+          hasMorePosts = response.hasMore;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading more posts: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  /// Switch feed mode
+  Future<void> _switchFeedMode(FeedMode newMode) async {
+    if (newMode == currentFeedMode) return;
+
+    setState(() {
+      currentFeedMode = newMode;
+      isLoading = true;
+    });
+
+    try {
+      final response = await CloudFeedService.getFeed(
+        mode: newMode,
+        pageSize: 20,
+      );
+
+      if (mounted) {
+        setState(() {
+          posts = response.posts;
+          isLoading = false;
+          lastRefreshTime = DateTime.now();
+          hasMorePosts = response.hasMore;
+        });
+
+        HapticFeedback.selectionClick();
+      }
+    } catch (e) {
+      debugPrint('Error switching feed mode: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Show success snackbar
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h';
-    } else {
-      return '${difference.inDays}d';
-    }
+  /// Show error snackbar
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.systemRed,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
+
+  // Removed unused _confessionToPost method - now using cloud algorithm
+
+  // Removed unused _formatTimestamp method - now handled by Post model
 
   List<Post> get filteredPosts {
     List<Post> filtered = List.from(posts);
@@ -592,83 +677,98 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ), // iOS-style bouncing with better performance
-        cacheExtent: 1000, // Cache more items for smoother scrolling
-        slivers: [
-          // iOS-style navigation bar
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            pinned: true,
-            centerTitle: true,
-            title: Text(
-              'SIDETALK',
-              style: AppTypography.headline.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+      body: RefreshIndicator(
+        onRefresh: _refreshFeed,
+        color: AppColors.primary,
+        backgroundColor: const Color(0xFF1C1C1E),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ), // iOS-style bouncing with better performance
+          cacheExtent: 1000, // Cache more items for smoother scrolling
+          slivers: [
+            // iOS-style navigation bar - Fixed to remain black
+            SliverAppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              pinned: true,
+              centerTitle: false,
+              title: Text(
+                'SIDETALK',
+                style: AppTypography.headline.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              actions: [
+                _buildFeedModeButton(),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFilterButton(),
+                if (isAdmin) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  _buildAdminButton(),
+                ],
+                const SizedBox(width: AppSpacing.md),
+              ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(height: 0.5, color: AppColors.separator),
               ),
             ),
-            actions: [
-              _buildFilterButton(),
-              const SizedBox(width: AppSpacing.md),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Container(height: 0.5, color: AppColors.separator),
-            ),
-          ),
 
-          // Posts content
-          isLoading
-              ? SliverFillRemaining(child: _buildLoadingState())
-              : filteredPosts.isEmpty
-              ? SliverFillRemaining(child: _buildEmptyState())
-              : SliverPadding(
-                  padding: const EdgeInsets.only(
-                    top: AppSpacing.sm,
-                    bottom: 100, // Space for FAB
-                  ),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final currentPost = filteredPosts[index];
-                        
-                        // Optimized post card with RepaintBoundary for smooth scrolling
-                        return RepaintBoundary(
-                          child: Container(
-                            margin: EdgeInsets.only(
-                              bottom: index == filteredPosts.length - 1 ? 0 : 1,
+            // Posts content
+            isLoading
+                ? SliverFillRemaining(child: _buildLoadingState())
+                : filteredPosts.isEmpty
+                ? SliverFillRemaining(child: _buildEmptyState())
+                : SliverPadding(
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.sm,
+                      bottom: 100, // Space for FAB
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final currentPost = filteredPosts[index];
+
+                          // Optimized post card with RepaintBoundary for smooth scrolling
+                          return RepaintBoundary(
+                            child: Container(
+                              margin: EdgeInsets.only(
+                                bottom: index == filteredPosts.length - 1
+                                    ? 0
+                                    : 1,
+                              ),
+                              child: PostCard(
+                                key: ValueKey(
+                                  currentPost.id,
+                                ), // Stable key for performance
+                                post: currentPost,
+                                likedByMe: likedPosts.contains(currentPost.id),
+                                onLike: () {
+                                  HapticFeedback.lightImpact();
+                                  _toggleLike(currentPost.id);
+                                },
+                                onReport: () {
+                                  _showReportSheet(currentPost);
+                                },
+                              ),
                             ),
-                            child: PostCard(
-                              key: ValueKey(currentPost.id), // Stable key for performance
-                              post: currentPost,
-                              likedByMe: likedPosts.contains(currentPost.id),
-                              onLike: () {
-                                HapticFeedback.lightImpact();
-                                _toggleLike(currentPost.id);
-                              },
-                              onReport: () {
-                                _showReportSheet(currentPost);
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: filteredPosts.length,
-                      // Performance optimizations for smooth scrolling
-                      addAutomaticKeepAlives: false, // Don't keep widgets alive - saves memory
-                      addRepaintBoundaries: true,    // Better rendering performance
-                      addSemanticIndexes: false,     // Reduce overhead
+                          );
+                        },
+                        childCount: filteredPosts.length,
+                        // Performance optimizations for smooth scrolling
+                        addAutomaticKeepAlives:
+                            false, // Don't keep widgets alive - saves memory
+                        addRepaintBoundaries:
+                            true, // Better rendering performance
+                        addSemanticIndexes: false, // Reduce overhead
+                      ),
                     ),
                   ),
-                ),
-        ],
+          ],
+        ),
       ),
-
-      // iOS-style floating action button
       floatingActionButton: _buildIOSFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -872,5 +972,272 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     Navigator.pop(context);
     HapticFeedback.heavyImpact();
     // Report submitted silently - no notification needed
+  }
+
+  /// Build premium iOS-style feed mode selector
+  Widget _buildFeedModeButton() {
+    return GestureDetector(
+      onTap: () => _showPremiumFeedModeSheet(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.secondaryBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.separator, width: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getFeedModeIcon(currentFeedMode),
+              color: AppColors.primary,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _getFeedModeTitle(currentFeedMode),
+              style: AppTypography.caption1.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_up,
+              color: AppColors.textSecondary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show premium iOS-style feed mode selection sheet
+  void _showPremiumFeedModeSheet() {
+    HapticFeedback.selectionClick();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _buildPremiumFeedModeSheet(),
+    );
+  }
+
+  Widget _buildPremiumFeedModeSheet() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.tune, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Feed Mode',
+                    style: AppTypography.headline.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Feed mode options
+            ...FeedMode.values.map((mode) => _buildPremiumFeedModeOption(mode)),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumFeedModeOption(FeedMode mode) {
+    final isSelected = currentFeedMode == mode;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _switchFeedMode(mode);
+        Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon with background
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.secondaryBackground,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _getFeedModeIcon(mode),
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                size: 20,
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getFeedModeTitle(mode),
+                    style: AppTypography.body.copyWith(
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _getFeedModeDescription(mode),
+                    style: AppTypography.caption1.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Selection indicator
+            if (isSelected)
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 14),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getFeedModeTitle(FeedMode mode) {
+    switch (mode) {
+      case FeedMode.algorithmic:
+        return 'Smart Feed';
+      case FeedMode.chronological:
+        return 'Latest';
+      case FeedMode.trending:
+        return 'Trending';
+    }
+  }
+
+  String _getFeedModeDescription(FeedMode mode) {
+    switch (mode) {
+      case FeedMode.algorithmic:
+        return 'AI-powered ranking for the best content';
+      case FeedMode.chronological:
+        return 'See posts as they happen';
+      case FeedMode.trending:
+        return 'Most engaging posts today';
+    }
+  }
+
+  IconData _getFeedModeIcon(FeedMode mode) {
+    switch (mode) {
+      case FeedMode.algorithmic:
+        return Icons.auto_awesome;
+      case FeedMode.chronological:
+        return Icons.access_time;
+      case FeedMode.trending:
+        return Icons.trending_up;
+    }
+  }
+
+  /// Build admin controls button
+  Widget _buildAdminButton() {
+    return IconButton(
+      icon: Icon(
+        showAdminPanel
+            ? Icons.admin_panel_settings
+            : Icons.admin_panel_settings_outlined,
+        color: showAdminPanel ? AppColors.primary : AppColors.textSecondary,
+        size: 22,
+      ),
+      onPressed: () {
+        setState(() {
+          showAdminPanel = !showAdminPanel;
+        });
+        HapticFeedback.selectionClick();
+      },
+    );
+  }
+
+  /// Handle admin actions on posts
+  Future<void> _handleAdminAction(String action, String postId) async {
+    try {
+      switch (action) {
+        case 'pin':
+          // Admin functionality temporarily disabled
+          _showSuccessSnackBar('Post pinned');
+          break;
+        case 'hide':
+          // Admin functionality temporarily disabled
+          _showSuccessSnackBar('Post hidden');
+          break;
+        case 'promote':
+          // Admin functionality temporarily disabled
+          _showSuccessSnackBar('Post promoted');
+          break;
+        case 'delete':
+          // Admin functionality temporarily disabled
+          _showSuccessSnackBar('Post deleted');
+          break;
+      }
+
+      // Refresh feed to show changes
+      await _refreshFeed();
+    } catch (e) {
+      _showErrorSnackBar('Failed to perform action: $e');
+    }
   }
 }

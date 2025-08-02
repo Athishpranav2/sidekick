@@ -6,6 +6,7 @@ import 'time_selection_screen.dart'; // Import the new screen
 import 'match_progress_screen.dart'; // Import the match progress screen
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/constants/app_colors.dart';
 
 class SideTableScreen extends StatefulWidget {
   const SideTableScreen({super.key});
@@ -151,7 +152,8 @@ class _SideTableScreenState extends State<SideTableScreen> {
                       height: size.width * 0.025,
                       decoration: BoxDecoration(
                         color: _hasActiveQueue
-                            ? const Color(0xFFDC2626) // Red for active queue
+                            ? AppColors
+                                  .systemRed // Red for active queue
                             : const Color(
                                 0xFF10B981,
                               ), // Green for recent matches
@@ -162,7 +164,7 @@ class _SideTableScreenState extends State<SideTableScreen> {
                           BoxShadow(
                             color:
                                 (_hasActiveQueue
-                                        ? const Color(0xFFDC2626)
+                                        ? AppColors.systemRed
                                         : const Color(0xFF10B981))
                                     .withOpacity(0.4),
                             blurRadius: 4,
@@ -241,14 +243,14 @@ class _SideTableScreenState extends State<SideTableScreen> {
           width: size.width * 0.1, // Adaptive size
           height: size.width * 0.1, // Adaptive size
           decoration: BoxDecoration(
-            color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+            color: AppColors.systemRed.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(
               size.width * 0.03,
             ), // Adaptive radius
           ),
           child: Icon(
             icon,
-            color: const Color(0xFFDC2626),
+            color: AppColors.systemRed,
             size: size.width * 0.05,
           ), // Adaptive size
         ),
@@ -296,13 +298,13 @@ class _SideTableScreenState extends State<SideTableScreen> {
           vertical: size.height * 0.025,
         ), // Adaptive padding
         decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
+          color: AppColors.systemRed,
           borderRadius: BorderRadius.circular(
             size.width * 0.045,
           ), // Adaptive radius
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFDC2626).withOpacity(0.4),
+              color: AppColors.systemRed.withOpacity(0.4),
               blurRadius: 20,
               spreadRadius: -8,
               offset: const Offset(0, 8),

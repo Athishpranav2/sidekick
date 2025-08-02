@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/app_colors.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -161,10 +162,10 @@ class HelpSupportScreen extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626).withOpacity(0.1),
+                  color: AppColors.systemRed.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: const Color(0xFFDC2626), size: 24),
+                child: Icon(icon, color: AppColors.systemRed, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -203,7 +204,7 @@ class HelpSupportScreen extends StatelessWidget {
                         style: TextStyle(
                           color: isInfo
                               ? const Color(0xFF8E8E93)
-                              : const Color(0xFFDC2626),
+                              : AppColors.systemRed,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -245,7 +246,7 @@ class HelpSupportScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        iconColor: const Color(0xFFDC2626),
+        iconColor: AppColors.systemRed,
         collapsedIconColor: const Color(0xFF8E8E93),
         children: [
           Container(
@@ -289,10 +290,10 @@ class HelpSupportScreen extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626).withOpacity(0.1),
+                  color: AppColors.systemRed.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: const Color(0xFFDC2626), size: 18),
+                child: Icon(icon, color: AppColors.systemRed, size: 18),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -407,7 +408,7 @@ class HelpSupportScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Email address copied to clipboard'),
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: AppColors.systemRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

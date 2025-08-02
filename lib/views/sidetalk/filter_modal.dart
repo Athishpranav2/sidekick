@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/filter_options.dart';
+import '../../core/constants/app_colors.dart';
 
 class FilterModal extends StatefulWidget {
   final FilterState currentFilter;
@@ -55,7 +56,7 @@ class _FilterModalState extends State<FilterModal> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
@@ -75,7 +76,7 @@ class _FilterModalState extends State<FilterModal> {
                   child: const Text(
                     'Reset',
                     style: TextStyle(
-                      color: Color(0xFFDC2626),
+                      color: AppColors.systemRed,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -84,7 +85,7 @@ class _FilterModalState extends State<FilterModal> {
               ],
             ),
           ),
-          
+
           // Filter Content
           Expanded(
             child: SingleChildScrollView(
@@ -97,52 +98,70 @@ class _FilterModalState extends State<FilterModal> {
                     '🔀 Post Type',
                     'Choose what kind of posts to see',
                     Column(
-                      children: PostType.values.map((type) => 
-                        _buildRadioTile(
-                          type.displayName,
-                          _tempFilter.postType == type,
-                          () => setState(() => _tempFilter = _tempFilter.copyWith(postType: type)),
-                        ),
-                      ).toList(),
+                      children: PostType.values
+                          .map(
+                            (type) => _buildRadioTile(
+                              type.displayName,
+                              _tempFilter.postType == type,
+                              () => setState(
+                                () => _tempFilter = _tempFilter.copyWith(
+                                  postType: type,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Category Section
                   _buildFilterSection(
                     '🧭 Category',
                     'Filter by content mood or theme',
                     Column(
-                      children: CategoryFilter.values.map((category) => 
-                        _buildRadioTile(
-                          category.displayName,
-                          _tempFilter.category == category,
-                          () => setState(() => _tempFilter = _tempFilter.copyWith(category: category)),
-                        ),
-                      ).toList(),
+                      children: CategoryFilter.values
+                          .map(
+                            (category) => _buildRadioTile(
+                              category.displayName,
+                              _tempFilter.category == category,
+                              () => setState(
+                                () => _tempFilter = _tempFilter.copyWith(
+                                  category: category,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Sort By Section
                   _buildFilterSection(
                     '🔄 Sort By',
                     'Choose how posts are ordered',
                     Column(
-                      children: SortOption.values.map((sort) => 
-                        _buildRadioTile(
-                          sort.displayName,
-                          _tempFilter.sortBy == sort,
-                          () => setState(() => _tempFilter = _tempFilter.copyWith(sortBy: sort)),
-                        ),
-                      ).toList(),
+                      children: SortOption.values
+                          .map(
+                            (sort) => _buildRadioTile(
+                              sort.displayName,
+                              _tempFilter.sortBy == sort,
+                              () => setState(
+                                () => _tempFilter = _tempFilter.copyWith(
+                                  sortBy: sort,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // My Posts Toggle
                   _buildFilterSection(
                     '🙋 My Posts',
@@ -150,16 +169,20 @@ class _FilterModalState extends State<FilterModal> {
                     _buildSwitchTile(
                       'Show My Posts Only',
                       _tempFilter.showMyPostsOnly,
-                      (value) => setState(() => _tempFilter = _tempFilter.copyWith(showMyPostsOnly: value)),
+                      (value) => setState(
+                        () => _tempFilter = _tempFilter.copyWith(
+                          showMyPostsOnly: value,
+                        ),
+                      ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
-          
+
           // Apply Button
           Container(
             padding: const EdgeInsets.all(20),
@@ -169,7 +192,7 @@ class _FilterModalState extends State<FilterModal> {
               child: ElevatedButton(
                 onPressed: _applyFilters,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
+                  backgroundColor: AppColors.systemRed,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
@@ -178,10 +201,7 @@ class _FilterModalState extends State<FilterModal> {
                 ),
                 child: const Text(
                   'Apply Filters',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -206,10 +226,7 @@ class _FilterModalState extends State<FilterModal> {
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: const TextStyle(
-            color: Color(0xFF888888),
-            fontSize: 14,
-          ),
+          style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
         ),
         const SizedBox(height: 12),
         content,
@@ -227,7 +244,7 @@ class _FilterModalState extends State<FilterModal> {
           color: isSelected ? const Color(0xFF2A2A2A) : const Color(0xFF222222),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF333333),
+            color: isSelected ? AppColors.systemRed : const Color(0xFF333333),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -238,18 +255,16 @@ class _FilterModalState extends State<FilterModal> {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? const Color(0xFFDC2626) : Colors.transparent,
+                color: isSelected ? AppColors.systemRed : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF666666),
+                  color: isSelected
+                      ? AppColors.systemRed
+                      : const Color(0xFF666666),
                   width: 2,
                 ),
               ),
               child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 12,
-                    )
+                  ? const Icon(Icons.check, color: Colors.white, size: 12)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -275,10 +290,7 @@ class _FilterModalState extends State<FilterModal> {
       decoration: BoxDecoration(
         color: const Color(0xFF222222),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF333333),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFF333333), width: 1),
       ),
       child: Row(
         children: [
@@ -295,8 +307,8 @@ class _FilterModalState extends State<FilterModal> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFFDC2626),
-            activeTrackColor: const Color(0xFFDC2626).withOpacity(0.3),
+            activeColor: AppColors.systemRed,
+            activeTrackColor: AppColors.systemRed.withOpacity(0.3),
             inactiveThumbColor: const Color(0xFF666666),
             inactiveTrackColor: const Color(0xFF444444),
           ),

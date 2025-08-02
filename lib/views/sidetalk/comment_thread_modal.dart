@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 
 class CommentThreadModal extends StatefulWidget {
   final String confessionText;
@@ -78,11 +79,15 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
             height: 220,
             child: commentsLocal.isEmpty
                 ? const Center(
-                    child: Text('No comments yet.', style: TextStyle(color: Colors.white38)),
+                    child: Text(
+                      'No comments yet.',
+                      style: TextStyle(color: Colors.white38),
+                    ),
                   )
                 : ListView.separated(
                     itemCount: commentsLocal.length,
-                    separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 16),
+                    separatorBuilder: (_, __) =>
+                        const Divider(color: Colors.white12, height: 16),
                     itemBuilder: (context, i) {
                       final c = commentsLocal[i];
                       return GestureDetector(
@@ -92,8 +97,14 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
                             context: context,
                             builder: (_) => AlertDialog(
                               backgroundColor: Colors.black,
-                              title: Text(c['username'] ?? 'Anonymous', style: const TextStyle(color: Colors.white)),
-                              content: Text(c['text'] ?? '', style: const TextStyle(color: Colors.white)),
+                              title: Text(
+                                c['username'] ?? 'Anonymous',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              content: Text(
+                                c['text'] ?? '',
+                                style: const TextStyle(color: Colors.white),
+                              ),
                             ),
                           );
                         },
@@ -101,11 +112,15 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              (c['username'] != null && c['username'].toString().trim().isNotEmpty)
+                              (c['username'] != null &&
+                                      c['username']
+                                          .toString()
+                                          .trim()
+                                          .isNotEmpty)
                                   ? c['username']
                                   : 'Unknown',
                               style: const TextStyle(
-                                color: Color(0xFFDC2626), // Red accent
+                                color: AppColors.systemRed, // Softer red accent
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                                 fontFamily: 'BebasNeue',
@@ -115,7 +130,10 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
                             const SizedBox(height: 4),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: Color(0xFF232326),
                                 borderRadius: BorderRadius.circular(8),
@@ -147,8 +165,14 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
                     hintStyle: TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: Color(0xFF232326),
-                    border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(10))),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 12,
+                    ),
                   ),
                   minLines: 1,
                   maxLines: 3,
@@ -156,9 +180,12 @@ class _CommentThreadModalState extends State<CommentThreadModal> {
               ),
               const SizedBox(width: 8),
               _posting
-                  ? const CircularProgressIndicator(strokeWidth: 2, color: Colors.red)
+                  ? const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.systemRed,
+                    )
                   : IconButton(
-                      icon: const Icon(Icons.send, color: Colors.red),
+                      icon: const Icon(Icons.send, color: AppColors.systemRed),
                       onPressed: () async {
                         final text = _controller.text.trim();
                         if (text.isEmpty) return;

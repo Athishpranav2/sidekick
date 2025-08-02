@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/user_provider.dart';
 import '../../models/user_model.dart';
 import '../../auth_service.dart';
+import '../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
 
@@ -181,7 +182,7 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         user.departmentShort,
                         style: const TextStyle(
-                          color: Color(0xFFDC2626),
+                          color: AppColors.systemRed,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -216,12 +217,12 @@ class ProfileScreen extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626).withOpacity(0.1),
+                    color: AppColors.systemRed.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     CupertinoIcons.mail_solid,
-                    color: Color(0xFFDC2626),
+                    color: AppColors.systemRed,
                     size: 16,
                   ),
                 ),
@@ -248,7 +249,7 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFDC2626), width: 3),
+        border: Border.all(color: AppColors.systemRed, width: 3),
       ),
       padding: const EdgeInsets.all(3),
       child: CircleAvatar(
@@ -318,7 +319,7 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Matches',
                   value: snapshot.data?.toString() ?? '0',
                   icon: CupertinoIcons.person_2_alt,
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                   size: size,
                 );
               },
@@ -333,7 +334,7 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Confessions',
                   value: snapshot.data?.toString() ?? '0',
                   icon: CupertinoIcons.chat_bubble_text_fill,
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                   size: size,
                 );
               },
@@ -407,7 +408,7 @@ class ProfileScreen extends StatelessWidget {
               icon: CupertinoIcons.pencil_circle_fill,
               title: 'Edit Profile',
               subtitle: 'Update your information',
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
                 Navigator.of(context).push(
@@ -421,7 +422,7 @@ class ProfileScreen extends StatelessWidget {
               icon: CupertinoIcons.bell_circle_fill,
               title: 'Notifications',
               subtitle: 'Manage your preferences',
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
                 // TODO: Navigate to notifications
@@ -431,7 +432,7 @@ class ProfileScreen extends StatelessWidget {
               icon: CupertinoIcons.shield_lefthalf_fill,
               title: 'Privacy & Security',
               subtitle: 'Control your data',
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
                 // TODO: Navigate to privacy
@@ -447,7 +448,7 @@ class ProfileScreen extends StatelessWidget {
               icon: CupertinoIcons.question_circle_fill,
               title: 'Help & Support',
               subtitle: 'Get assistance',
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
                 Navigator.of(context).push(
@@ -461,7 +462,7 @@ class ProfileScreen extends StatelessWidget {
               icon: CupertinoIcons.info_circle_fill,
               title: 'About',
               subtitle: 'App information',
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
                 // TODO: Navigate to about
@@ -623,17 +624,17 @@ class ProfileScreen extends StatelessWidget {
             },
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Icon(
                   CupertinoIcons.pencil_circle,
-                  color: Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                   size: 18,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   'Edit Profile',
                   style: TextStyle(
-                    color: Color(0xFFDC2626),
+                    color: AppColors.systemRed,
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
                   ),
@@ -666,10 +667,10 @@ class ProfileScreen extends StatelessWidget {
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
+          child: Text(
             'Cancel',
             style: TextStyle(
-              color: Color(0xFFDC2626),
+              color: AppColors.systemRed,
               fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
@@ -807,9 +808,7 @@ class ProfileScreen extends StatelessWidget {
             height: size.height * 0.055,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(
-                  0xFFDC2626,
-                ), // Changed to red theme
+                backgroundColor: AppColors.systemRed, // Changed to red theme
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

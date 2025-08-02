@@ -82,7 +82,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
           valueListenable: _commentController,
           builder: (context, textValue, child) {
             final hasText = textValue.text.trim().isNotEmpty;
-            
+
             return AnimatedScale(
               scale: _isCommentFocused ? 1.1 : 1.0,
               duration: AppAnimations.fast,
@@ -121,10 +121,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                         ? LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [
-                              AppColors.primary,
-                              AppColors.primaryDark,
-                            ],
+                            colors: [AppColors.primary, AppColors.primaryDark],
                           )
                         : null,
                     color: (hasText && !_isLoading)
@@ -410,7 +407,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                                         children: [
                                           Icon(
                                             Icons.favorite,
-                                            color: Colors.red,
+                                            color: AppColors.systemRed,
                                             size: 16,
                                           ),
                                           const SizedBox(width: 6),
@@ -474,7 +471,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                                     padding: EdgeInsets.all(20),
                                     child: Center(
                                       child: CircularProgressIndicator(
-                                        color: Color(0xFFDC2626),
+                                        color: AppColors.systemRed,
                                       ),
                                     ),
                                   );
@@ -714,7 +711,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                         ),
                       ),
                     ),
-                                        const SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: AppSpacing.md),
                     // Fully isolated send button - no rebuilds during typing
                     _buildSendButton(),
                   ],

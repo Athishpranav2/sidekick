@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/constants/app_colors.dart';
 
 import 'match_progress_screen.dart';
 
@@ -328,11 +329,11 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFDC2626).withOpacity(0.2),
+                  color: AppColors.systemRed.withOpacity(0.2),
                   blurRadius: 8,
                   spreadRadius: 0,
                   offset: const Offset(0, 2),
@@ -378,11 +379,11 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
             width: double.infinity,
             height: 54,
             decoration: BoxDecoration(
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFDC2626).withOpacity(0.15),
+                  color: AppColors.systemRed.withOpacity(0.15),
                   blurRadius: 8,
                   spreadRadius: 0,
                   offset: const Offset(0, 2),
@@ -507,7 +508,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
       ),
       body: _isLoadingStatus
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFDC2626)),
+              child: CircularProgressIndicator(color: AppColors.systemRed),
             )
           : _isUserMatched
           ? _buildMatchedUserScreen(size)
@@ -569,7 +570,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
                 _matchOnlySameGender = value;
               });
             },
-            activeColor: const Color(0xFFDC2626),
+            activeColor: AppColors.systemRed,
             trackColor: const Color(0xFF2C2C2E),
           ),
         ],
@@ -588,11 +589,11 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: const Color(0xFFDC2626),
+                color: AppColors.systemRed,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFDC2626).withOpacity(0.3),
+                    color: AppColors.systemRed.withOpacity(0.3),
                     blurRadius: 20,
                     spreadRadius: 0,
                     offset: const Offset(0, 8),
@@ -639,7 +640,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: size.height * 0.022),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                   borderRadius: BorderRadius.circular(size.width * 0.04),
                 ),
                 child: Center(
@@ -741,8 +742,8 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
       mainTextColor = const Color(0xFF4ADE80);
       subTextColor = const Color(0xFF86EFAC);
     } else if (isSelected) {
-      backgroundColor = const Color(0xFFDC2626);
-      borderColor = const Color(0xFFDC2626);
+      backgroundColor = AppColors.systemRed;
+      borderColor = AppColors.systemRed;
       mainTextColor = Colors.white;
       subTextColor = Colors.white70;
     } else {
@@ -866,13 +867,13 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: size.height * 0.022),
         decoration: BoxDecoration(
-          color: canConfirm ? const Color(0xFFDC2626) : Colors.grey[850],
+          color: canConfirm ? AppColors.systemRed : Colors.grey[850],
           borderRadius: BorderRadius.circular(size.width * 0.04),
           boxShadow: !canConfirm
               ? []
               : [
                   BoxShadow(
-                    color: const Color(0xFFDC2626).withValues(alpha: 0.4),
+                    color: AppColors.systemRed.withValues(alpha: 0.4),
                     blurRadius: 20,
                     spreadRadius: -8,
                     offset: const Offset(0, 8),
