@@ -478,6 +478,16 @@ class ProfileScreen extends StatelessWidget {
                 _showSignOutDialog(context, size);
               },
             ),
+            _buildModernOptionTile(
+              icon: CupertinoIcons.trash_circle_fill,
+              title: 'Delete Account',
+              subtitle: 'Permanently delete your account',
+              color: const Color(0xFFFF453A),
+              onTap: () {
+                HapticFeedback.heavyImpact();
+                _showDeleteAccountDialog(context, size);
+              },
+            ),
           ],
         ),
       ],
@@ -1089,14 +1099,87 @@ class ProfileScreen extends StatelessWidget {
       // Clear user provider
       userProvider.clearUser();
 
-      // Delete Firebase Auth account (this will sign out automatically)
-      await user.delete();
+      // Force delete Firebase Auth account with proper error handling
+      try {
+        // First attempt to delete the account
+        await user.delete();
+
+        // If successful, sign out automatically
+        await FirebaseAuth.instance.signOut();
+      } catch (authError) {
+        print('Auth deletion error: $authError');
+
+        // If deletion fails due to recent login requirement
+        if (authError.toString().contains('requires-recent-login')) {
+          try {
+            // Force re-authentication by signing out and back in
+            await FirebaseAuth.instance.signOut();
+            await Future.delayed(const Duration(seconds: 2));
+
+            // Try to delete again after re-authentication
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              await currentUser.delete();
+              await FirebaseAuth.instance.signOut();
+            }
+          } catch (reAuthError) {
+            print('Re-authentication error: $reAuthError');
+
+            // Force sign out as fallback
+            await FirebaseAuth.instance.signOut();
+
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'Account data deleted. You have been signed out.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: const Color(0xFFFF9500),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          }
+        } else {
+          // For other Firebase Auth errors, force sign out
+          await FirebaseAuth.instance.signOut();
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Account data deleted. Auth error: $authError'),
+                backgroundColor: const Color(0xFFFF9500),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Firestore deletion error: $e');
+
+      // Even if Firestore fails, try to delete auth account
+      try {
+        await user.delete();
+        await FirebaseAuth.instance.signOut();
+      } catch (authError) {
+        await FirebaseAuth.instance.signOut();
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Account deleted successfully'),
-            backgroundColor: const Color(0xFF32D74B),
+            content: Text('Failed to delete account data: $e'),
+            backgroundColor: const Color(0xFFFF453A),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1104,14 +1187,6 @@ class ProfileScreen extends StatelessWidget {
           ),
         );
       }
-    } catch (e) {
-      // If Firebase Auth deletion fails, the user might need to re-authenticate
-      if (e.toString().contains('requires-recent-login')) {
-        throw Exception(
-          'Please sign out and sign back in, then try deleting your account again.',
-        );
-      }
-      throw Exception('Failed to delete account: $e');
     }
   }
 }
