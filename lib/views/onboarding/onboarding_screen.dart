@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../home/home_screen.dart';
 import '../../providers/user_provider.dart';
+import '../../core/constants/app_colors.dart';
 // Make sure this import path is correct for your project structure
 import 'onboarding_logic.dart';
 
@@ -166,7 +167,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
               const Text(
                 '*',
                 style: TextStyle(
-                  color: Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -207,10 +208,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Color(0xFFDC2626),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: AppColors.systemRed, width: 2),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
@@ -445,7 +443,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             color: const Color(0xFF1C1C1E),
             borderRadius: BorderRadius.circular(size.width * 0.03),
             border: Border.all(
-              color: isSuccess ? const Color(0xFFDC2626) : Colors.orange,
+              color: isSuccess ? AppColors.systemRed : Colors.orange,
               width: 1,
             ),
           ),
@@ -454,7 +452,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               Container(
                 padding: EdgeInsets.all(size.width * 0.015),
                 decoration: BoxDecoration(
-                  color: isSuccess ? const Color(0xFFDC2626) : Colors.orange,
+                  color: isSuccess ? AppColors.systemRed : Colors.orange,
                   borderRadius: BorderRadius.circular(size.width * 0.015),
                 ),
                 child: Icon(
@@ -703,7 +701,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 0.9 *
                 ((_currentPage + 1) / 5), // Updated page count
             decoration: BoxDecoration(
-              color: const Color(0xFFDC2626),
+              color: AppColors.systemRed,
               borderRadius: BorderRadius.circular(size.height * 0.0015),
             ),
           ),
@@ -728,12 +726,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: const Color(0xFF1C1C1E),
                   borderRadius: BorderRadius.circular(size.width * 0.075),
-                  border: Border.all(color: const Color(0xFFDC2626), width: 2),
+                  border: Border.all(color: AppColors.systemRed, width: 2),
                 ),
                 child: Icon(
                   Icons.school_rounded,
                   size: size.width * (isTablet ? 0.1 : 0.15),
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.systemRed,
                 ),
               ),
               SizedBox(height: size.height * 0.06),
@@ -840,8 +838,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(size.width * 0.04),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFDC2626),
+                      borderSide: BorderSide(
+                        color: AppColors.systemRed,
                         width: 2,
                       ),
                     ),
@@ -914,7 +912,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                     prefixText: '@',
                     prefixStyle: TextStyle(
-                      color: const Color(0xFFDC2626),
+                      color: AppColors.systemRed,
                       fontSize: size.width * (isTablet ? 0.035 : 0.045),
                       fontWeight: FontWeight.w600,
                     ),
@@ -924,9 +922,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             child: SizedBox(
                               width: size.width * 0.04,
                               height: size.width * 0.04,
-                              child: const CircularProgressIndicator(
+                              child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Color(0xFFDC2626),
+                                color: AppColors.systemRed,
                               ),
                             ),
                           )
@@ -961,7 +959,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       borderSide: BorderSide(
                         color: _usernameError != null
                             ? Colors.red
-                            : const Color(0xFFDC2626),
+                            : AppColors.systemRed,
                         width: 2,
                       ),
                     ),
@@ -1052,7 +1050,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           child: Text(
                             '@$suggestion',
                             style: TextStyle(
-                              color: const Color(0xFFDC2626),
+                              color: AppColors.systemRed,
                               fontSize: size.width * 0.032,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1131,13 +1129,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         height: size.width * 0.35,
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFFDC2626).withOpacity(0.15)
+              ? AppColors.systemRed.withOpacity(0.15)
               : const Color(0xFF1C1C1E),
           borderRadius: BorderRadius.circular(size.width * 0.06),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFFDC2626)
-                : const Color(0xFF2C2C2E),
+            color: isSelected ? AppColors.systemRed : const Color(0xFF2C2C2E),
             width: 2,
           ),
         ),
@@ -1147,7 +1143,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Icon(
               icon,
               size: size.width * 0.12,
-              color: isSelected ? const Color(0xFFDC2626) : Colors.grey[400],
+              color: isSelected ? AppColors.systemRed : Colors.grey[400],
             ),
             SizedBox(height: size.height * 0.015),
             Text(
@@ -1228,12 +1224,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       width: size.width * 0.08,
                       height: size.width * 0.08,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDC2626).withOpacity(0.1),
+                        color: AppColors.systemRed.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(size.width * 0.02),
                       ),
                       child: Icon(
                         Icons.people_outline,
-                        color: const Color(0xFFDC2626),
+                        color: AppColors.systemRed,
                         size: size.width * 0.045,
                       ),
                     ),
@@ -1311,12 +1307,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                  colors: [AppColors.systemRed, Color(0xFFB91C1C)],
                 ),
                 borderRadius: BorderRadius.circular(size.height * 0.035),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFDC2626).withOpacity(0.25),
+                    color: AppColors.systemRed.withOpacity(0.25),
                     blurRadius: size.width * 0.05,
                     offset: Offset(0, size.height * 0.01),
                   ),
