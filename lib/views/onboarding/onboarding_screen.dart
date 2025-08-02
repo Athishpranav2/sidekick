@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../home/home_screen.dart';
+import '../side_table/side_table_screen.dart';
+import '../navigation/navigation_container.dart';
 import '../../providers/user_provider.dart';
 import '../../core/constants/app_colors.dart';
 // Make sure this import path is correct for your project structure
@@ -101,17 +103,22 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
-          offset: Offset(0.0, size.height + 8.0),
+          offset: Offset(0.0, size.height + 4.0),
           child: Material(
-            elevation: 8.0,
+            elevation: 12.0,
             color: const Color(0xFF1C1C1E),
-            borderRadius: BorderRadius.circular(16),
-            child: ConstrainedBox(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C1C1E),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2C2C2E), width: 1),
+              ),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.3,
+                maxHeight: MediaQuery.of(context).size.height * 0.25,
               ),
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 shrinkWrap: true,
                 itemCount: _filteredItems.length,
                 itemBuilder: (context, index) {
@@ -124,15 +131,16 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 14,
+                        horizontal: 16,
+                        vertical: 12,
                       ),
                       child: Text(
                         item,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w500,
+                          letterSpacing: -0.1,
                         ),
                       ),
                     ),
@@ -153,28 +161,16 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                '*',
-                style: TextStyle(
-                  color: AppColors.systemRed,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          Text(
+            widget.label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _controller,
             focusNode: _focusNode,
@@ -183,36 +179,55 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w500,
+              letterSpacing: -0.1,
             ),
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: TextStyle(
-                color: Colors.grey[500],
+              hintStyle: const TextStyle(
+                color: Color(0xFF8E8E93),
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
               ),
-              prefixIcon: Icon(widget.icon, color: Colors.grey[400], size: 22),
-              suffixIcon: Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey[400],
+              prefixIcon: Container(
+                margin: const EdgeInsets.only(right: 12),
+                child: Icon(
+                  widget.icon,
+                  color: const Color(0xFF8E8E93),
+                  size: 20,
+                ),
+              ),
+              suffixIcon: Container(
+                margin: const EdgeInsets.only(left: 12),
+                child: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Color(0xFF8E8E93),
+                  size: 20,
+                ),
               ),
               filled: true,
               fillColor: const Color(0xFF1C1C1E),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFF2C2C2E)),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF2C2C2E),
+                  width: 1,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFF2C2C2E)),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF2C2C2E),
+                  width: 1,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: AppColors.systemRed, width: 2),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.systemRed, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
+                horizontal: 16,
+                vertical: 16,
               ),
             ),
           ),
@@ -402,7 +417,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           context,
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomeScreen(),
+                const NavigationContainer(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
@@ -545,34 +560,40 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       body: SafeArea(
-        child: Center(
-          child: SizedBox(
-            width: contentWidth,
-            child: Column(
-              children: [
-                _buildHeader(size, isTablet, user),
-                _buildProgressBar(size),
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Prevent manual swipe
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                      });
-                    },
-                    children: [
-                      _buildWelcomePage(size, isTablet),
-                      _buildNamePage(size, isTablet),
-                      _buildUsernamePage(size, isTablet),
-                      _buildGenderPage(size, isTablet), // New page added
-                      _buildDetailsPage(size, isTablet),
-                    ],
+        child: GestureDetector(
+          onTap: () {
+            // Dismiss keyboard when tapping outside
+            FocusScope.of(context).unfocus();
+          },
+          child: Center(
+            child: SizedBox(
+              width: contentWidth,
+              child: Column(
+                children: [
+                  _buildHeader(size, isTablet, user),
+                  _buildProgressBar(size),
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      physics:
+                          const NeverScrollableScrollPhysics(), // Prevent manual swipe
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPage = index;
+                        });
+                      },
+                      children: [
+                        _buildWelcomePage(size, isTablet),
+                        _buildNamePage(size, isTablet),
+                        _buildUsernamePage(size, isTablet),
+                        _buildGenderPage(size, isTablet), // New page added
+                        _buildDetailsPage(size, isTablet),
+                      ],
+                    ),
                   ),
-                ),
-                _buildNavigation(size),
-              ],
+                  _buildNavigation(size),
+                ],
+              ),
             ),
           ),
         ),
@@ -1075,39 +1096,40 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: size.height * 0.1),
               Text(
-                'Tell us your gender',
+                'What\'s your gender?',
                 style: TextStyle(
-                  fontSize: size.width * (isTablet ? 0.055 : 0.07),
+                  fontSize: size.width * (isTablet ? 0.055 : 0.08),
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  letterSpacing: -0.8,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: size.height * 0.015),
+              SizedBox(height: size.height * 0.02),
               Text(
-                'This helps in tailoring your app experience.',
+                'This helps us personalize your experience',
                 style: TextStyle(
                   fontSize: size.width * (isTablet ? 0.03 : 0.04),
-                  color: Colors.grey[400],
+                  color: const Color(0xFF8E8E93),
                   letterSpacing: -0.2,
                 ),
               ),
               SizedBox(height: size.height * 0.08),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildGenderCard(size, 'Male', Icons.male_rounded),
-                  SizedBox(width: size.width * 0.05),
                   _buildGenderCard(size, 'Female', Icons.female_rounded),
                 ],
               ),
+              SizedBox(height: size.height * 0.1),
             ],
           ),
         ),
@@ -1124,34 +1146,53 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: size.width * 0.35,
-        height: size.width * 0.35,
+        duration: const Duration(milliseconds: 300),
+        width: size.width * 0.38,
+        height: size.width * 0.38,
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.systemRed.withOpacity(0.15)
+              ? AppColors.systemRed.withOpacity(0.1)
               : const Color(0xFF1C1C1E),
-          borderRadius: BorderRadius.circular(size.width * 0.06),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.systemRed : const Color(0xFF2C2C2E),
-            width: 2,
+            width: 1.5,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.systemRed.withOpacity(0.2),
+                    blurRadius: 12,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: size.width * 0.12,
-              color: isSelected ? AppColors.systemRed : Colors.grey[400],
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.systemRed.withOpacity(0.15)
+                    : const Color(0xFF2C2C2E),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon,
+                size: size.width * 0.08,
+                color: isSelected ? AppColors.systemRed : Colors.grey[400],
+              ),
             ),
-            SizedBox(height: size.height * 0.015),
+            SizedBox(height: size.height * 0.02),
             Text(
               gender,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey[300],
                 fontSize: size.width * 0.045,
                 fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
               ),
             ),
           ],
@@ -1171,26 +1212,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: size.height * 0.08),
+              SizedBox(height: size.height * 0.1),
               Text(
-                'Almost done!',
+                'Tell us about your studies',
                 style: TextStyle(
-                  fontSize: size.width * (isTablet ? 0.055 : 0.07),
+                  fontSize: size.width * (isTablet ? 0.055 : 0.08),
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  letterSpacing: -0.8,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: size.height * 0.015),
+              SizedBox(height: size.height * 0.02),
               Text(
-                'Tell us about your studies at PSG Tech',
+                'This helps us connect you with the right people',
                 style: TextStyle(
                   fontSize: size.width * (isTablet ? 0.03 : 0.04),
-                  color: Colors.grey[400],
+                  color: const Color(0xFF8E8E93),
                   letterSpacing: -0.2,
                 ),
               ),
-              SizedBox(height: size.height * 0.06),
+              SizedBox(height: size.height * 0.08),
               SearchableDropdown(
                 label: 'Department',
                 hint: 'Type or select your department',
@@ -1200,7 +1241,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   setState(() => _selectedDepartment = value);
                 },
               ),
-              SizedBox(height: size.height * 0.03),
+              SizedBox(height: size.height * 0.04),
               SearchableDropdown(
                 label: 'Year of Study',
                 hint: 'Type or select your year',
@@ -1210,30 +1251,30 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   setState(() => _selectedYear = value);
                 },
               ),
-              SizedBox(height: size.height * 0.04),
+              SizedBox(height: size.height * 0.06),
               Container(
-                padding: EdgeInsets.all(size.width * 0.05),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(size.width * 0.04),
-                  border: Border.all(color: const Color(0xFF2C2C2E)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF2C2C2E), width: 1),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: size.width * 0.08,
-                      height: size.width * 0.08,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
                         color: AppColors.systemRed.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(size.width * 0.02),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.people_outline,
                         color: AppColors.systemRed,
-                        size: size.width * 0.045,
+                        size: 24,
                       ),
                     ),
-                    SizedBox(width: size.width * 0.04),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1242,17 +1283,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             'Connect with your batch',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: size.width * (isTablet ? 0.025 : 0.035),
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          SizedBox(height: size.height * 0.005),
+                          const SizedBox(height: 4),
                           Text(
                             'We\'ll help you find classmates and study groups from your department and year.',
                             style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: size.width * (isTablet ? 0.022 : 0.032),
-                              height: 1.3,
+                              color: const Color(0xFF8E8E93),
+                              fontSize: 14,
+                              height: 1.4,
+                              letterSpacing: -0.1,
                             ),
                           ),
                         ],
