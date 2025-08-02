@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'post_card.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
+import 'post_card.dart';
 import '../../models/post.dart';
 import '../../models/filter_options.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/cloud_feed_service.dart';
-
 import '../compose/compose_screen.dart';
 
 class SidetalkFeed extends StatefulWidget {
@@ -24,7 +24,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   FilterState currentFilter = const FilterState();
   PostTypeFilter postTypeFilter = PostTypeFilter.all;
 
-  // Enhanced feed state management
   Set<String> likedPosts = <String>{};
   List<Post> posts = [];
   bool isLoading = true;
@@ -33,15 +32,12 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   bool hasMorePosts = true;
   DocumentSnapshot? lastDocument;
 
-  // Feed mode management
   FeedMode currentFeedMode = FeedMode.algorithmic;
   DateTime? lastRefreshTime;
 
-  // Admin functionality
   bool isAdmin = false;
   bool showAdminPanel = false;
 
-  // Card colors for posts
   final List<Color> cardColors = [
     const Color(0xFFF5F5DC), // Beige
     const Color(0xFFFFFACD), // Light yellow
@@ -63,38 +59,38 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     if (user == null) return;
 
     try {
-      // Get all confessions where user has liked (only works with new array schema)
       final querySnapshot = await FirebaseFirestore.instance
           .collection('confessions')
           .where('likes', arrayContains: user.uid)
           .get();
 
-      setState(() {
-        likedPosts = querySnapshot.docs.map((doc) => doc.id).toSet();
-      });
+      if (mounted) {
+        setState(() {
+          likedPosts = querySnapshot.docs.map((doc) => doc.id).toSet();
+        });
+      }
     } catch (e) {
       debugPrint('Error loading liked posts: $e');
-      // If the query fails (due to old schema), just start with empty liked posts
-      setState(() {
-        likedPosts = <String>{};
-      });
+      if (mounted) {
+        setState(() {
+          likedPosts = <String>{};
+        });
+      }
     }
   }
 
-  /// Initialize admin status
   Future<void> _initializeAdmin() async {
     setState(() {
       isAdmin = false; // Temporarily disabled
     });
   }
 
-  /// Load initial feed with cloud algorithmic ranking
   Future<void> _loadInitialFeed() async {
-    try {
-      setState(() {
-        isLoading = true;
-      });
+    setState(() {
+      isLoading = true;
+    });
 
+    try {
       final response = await CloudFeedService.getFeed(
         mode: currentFeedMode,
         pageSize: 20,
@@ -119,15 +115,14 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  /// Refresh feed with pull-to-refresh
   Future<void> _refreshFeed() async {
     if (isRefreshing) return;
 
-    try {
-      setState(() {
-        isRefreshing = true;
-      });
+    setState(() {
+      isRefreshing = true;
+    });
 
+    try {
       final response = await CloudFeedService.getFeed(
         mode: currentFeedMode,
         pageSize: 20,
@@ -141,8 +136,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
           lastRefreshTime = DateTime.now();
           hasMorePosts = response.hasMore;
         });
-
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         _showSuccessSnackBar('Feed refreshed');
       }
     } catch (e) {
@@ -156,15 +150,14 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  /// Load more posts for pagination
   Future<void> _loadMorePosts() async {
     if (isLoadingMore || !hasMorePosts) return;
 
-    try {
-      setState(() {
-        isLoadingMore = true;
-      });
+    setState(() {
+      isLoadingMore = true;
+    });
 
+    try {
       final lastPostId = posts.isNotEmpty ? posts.last.id : null;
       final response = await CloudFeedService.getFeed(
         mode: currentFeedMode,
@@ -189,7 +182,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  /// Switch feed mode
   Future<void> _switchFeedMode(FeedMode newMode) async {
     if (newMode == currentFeedMode) return;
 
@@ -211,7 +203,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
           lastRefreshTime = DateTime.now();
           hasMorePosts = response.hasMore;
         });
-
         HapticFeedback.selectionClick();
       }
     } catch (e) {
@@ -224,8 +215,8 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  /// Show success snackbar
   void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -237,8 +228,8 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  /// Show error snackbar
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -250,27 +241,10 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // Removed unused _confessionToPost method - now using cloud algorithm
-
-  // Removed unused _formatTimestamp method - now handled by Post model
-
   List<Post> get filteredPosts {
     List<Post> filtered = List.from(posts);
 
-    // Filter by post type (existing filter)
-    switch (currentFilter.postType) {
-      case PostType.anonymous:
-        filtered = filtered.where((post) => post.isAnonymous).toList();
-        break;
-      case PostType.public:
-        filtered = filtered.where((post) => !post.isAnonymous).toList();
-        break;
-      case PostType.all:
-        // Keep all posts
-        break;
-    }
-
-    // Additional filter by anonymous/non-anonymous
+    // Filter by anonymous/non-anonymous
     switch (postTypeFilter) {
       case PostTypeFilter.anonymous:
         filtered = filtered.where((post) => post.isAnonymous).toList();
@@ -283,36 +257,28 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         break;
     }
 
-    // Filter by category (placeholder logic - you can expand this based on post content analysis)
+    // Filter by category
     switch (currentFilter.category) {
       case CategoryFilter.positive:
-        // Example: filter posts with positive sentiment (implement sentiment analysis)
         break;
       case CategoryFilter.negative:
-        // Example: filter posts with negative sentiment
         break;
       case CategoryFilter.sensitive:
-        // Example: filter posts marked as sensitive
         break;
       case CategoryFilter.others:
-        // Example: filter other category posts
         break;
       case CategoryFilter.all:
-        // Keep all posts
         break;
     }
 
-    // Filter by user's own posts (placeholder - requires user identification)
+    // Filter by user's own posts
     if (currentFilter.showMyPostsOnly) {
-      // filtered = filtered.where((post) => post.userId == currentUserId).toList();
-      // For now, we'll just show posts with username (as example)
       filtered = filtered.where((post) => !post.isAnonymous).toList();
     }
 
     // Sort posts
     switch (currentFilter.sortBy) {
       case SortOption.recent:
-        // Keep default order (most recent first)
         break;
       case SortOption.mostLiked:
         filtered.sort((a, b) => b.likes.compareTo(a.likes));
@@ -325,7 +291,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     return filtered;
   }
 
-  // Firebase-based like toggle functionality
   void _toggleLike(String postId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -335,63 +300,51 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         .doc(postId);
 
     try {
-      // Check current state first
       final doc = await confessionRef.get();
       if (!doc.exists) return;
 
       final data = doc.data()!;
       final likesData = data['likes'];
 
+      // Handle both List and int formats for likes
       if (likesData is List) {
-        // New schema: use Firestore array methods
         final likes = List<String>.from(likesData);
 
         if (likes.contains(user.uid)) {
-          // Unlike: remove user from array
           await confessionRef.update({
             'likes': FieldValue.arrayRemove([user.uid]),
           });
-          setState(() {
-            likedPosts.remove(postId);
-          });
+          setState(() => likedPosts.remove(postId));
         } else {
-          // Like: add user to array
           await confessionRef.update({
             'likes': FieldValue.arrayUnion([user.uid]),
           });
-          setState(() {
-            likedPosts.add(postId);
-          });
+          setState(() => likedPosts.add(postId));
         }
-      } else {
-        // Old schema: convert to new schema with array union
+      } else if (likesData is int) {
+        // If likes is stored as integer, convert to array format
         await confessionRef.update({
           'likes': FieldValue.arrayUnion([user.uid]),
         });
-        setState(() {
-          likedPosts.add(postId);
+        setState(() => likedPosts.add(postId));
+      } else {
+        // Fallback: initialize as array
+        await confessionRef.update({
+          'likes': FieldValue.arrayUnion([user.uid]),
         });
+        setState(() => likedPosts.add(postId));
       }
     } catch (e) {
-      print('Error toggling like: $e');
-      // Revert local state on error
-      setState(() {
-        if (likedPosts.contains(postId)) {
-          likedPosts.remove(postId);
-        } else {
-          likedPosts.add(postId);
-        }
-      });
+      debugPrint('Error toggling like: $e');
     }
   }
 
-  // iOS-style loading state
   Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 40,
             height: 40,
             child: CircularProgressIndicator(
@@ -411,7 +364,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // iOS-style empty state
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -421,7 +373,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // iOS-style icon
             Container(
               width: 80,
               height: 80,
@@ -429,25 +380,19 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 color: AppColors.tertiaryBackground,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.forum_rounded,
                 size: 40,
                 color: AppColors.textTertiary,
               ),
             ),
-
             const SizedBox(height: AppSpacing.xxl),
-
-            // Title
             Text(
               'No Posts Yet',
               style: AppTypography.title2.copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: AppSpacing.sm),
-
-            // Description
             Text(
               'Be the first to share your thoughts\nwith the community.',
               style: AppTypography.subheadline.copyWith(
@@ -455,10 +400,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
               ),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: AppSpacing.xxxl),
-
-            // Call to action button
             Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 200),
@@ -480,13 +422,13 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                                   ).animate(
                                     CurvedAnimation(
                                       parent: animation,
-                                      curve: AppAnimations.easeOut,
+                                      curve: Curves.easeOut,
                                     ),
                                   ),
                               child: child,
                             );
                           },
-                      transitionDuration: AppAnimations.medium,
+                      transitionDuration: const Duration(milliseconds: 300),
                     ),
                   );
                 },
@@ -519,7 +461,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // Minimalistic filter button
   Widget _buildFilterButton() {
     return GestureDetector(
       onTap: () {
@@ -539,7 +480,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // Filter action sheet
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
@@ -556,7 +496,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Minimal handle
               Container(
                 width: 32,
                 height: 3,
@@ -566,10 +505,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                   borderRadius: BorderRadius.circular(1.5),
                 ),
               ),
-
               const SizedBox(height: AppSpacing.xxl),
-
-              // Simple title
               Text(
                 'Filter',
                 style: AppTypography.body.copyWith(
@@ -577,10 +513,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                   color: AppColors.textSecondary,
                 ),
               ),
-
               const SizedBox(height: AppSpacing.xl),
-
-              // Filter options
               _buildFilterOption(
                 title: 'All Posts',
                 isSelected: postTypeFilter == PostTypeFilter.all,
@@ -596,7 +529,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 isSelected: postTypeFilter == PostTypeFilter.nonAnonymous,
                 onTap: () => _updateFilter(PostTypeFilter.nonAnonymous),
               ),
-
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
@@ -675,74 +607,79 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
 
   @override
   Widget build(BuildContext context) {
+    final displayedPosts = filteredPosts; // Calculate once per build
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        onRefresh: _refreshFeed,
-        color: AppColors.primary,
-        backgroundColor: const Color(0xFF1C1C1E),
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ), // iOS-style bouncing with better performance
-          cacheExtent: 1000, // Cache more items for smoother scrolling
-          slivers: [
-            // iOS-style navigation bar - Fixed to remain black
-            SliverAppBar(
-              backgroundColor: AppColors.background,
-              elevation: 0,
-              pinned: true,
-              centerTitle: false,
-              title: Text(
-                'SIDETALK',
-                style: AppTypography.headline.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refreshFeed,
+          color: AppColors.systemRed,
+          backgroundColor: AppColors.secondaryBackground,
+          strokeWidth: 3.0,
+          displacement: 80.0,
+          edgeOffset: 0.0,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            cacheExtent: 1000,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  color: AppColors.background,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: kToolbarHeight,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'SIDETALK',
+                                style: AppTypography.headline.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              _buildFeedModeButton(),
+                              const SizedBox(width: AppSpacing.sm),
+                              _buildFilterButton(),
+                              if (isAdmin) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                _buildAdminButton(),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Container(height: 0.5, color: AppColors.separator),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              actions: [
-                _buildFeedModeButton(),
-                const SizedBox(width: AppSpacing.sm),
-                _buildFilterButton(),
-                if (isAdmin) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  _buildAdminButton(),
-                ],
-                const SizedBox(width: AppSpacing.md),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(1),
-                child: Container(height: 0.5, color: AppColors.separator),
-              ),
-            ),
-
-            // Posts content
-            isLoading
-                ? SliverFillRemaining(child: _buildLoadingState())
-                : filteredPosts.isEmpty
-                ? SliverFillRemaining(child: _buildEmptyState())
-                : SliverPadding(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.sm,
-                      bottom: 100, // Space for FAB
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final currentPost = filteredPosts[index];
-
-                          // Optimized post card with RepaintBoundary for smooth scrolling
-                          return RepaintBoundary(
-                            child: Container(
-                              margin: EdgeInsets.only(
-                                bottom: index == filteredPosts.length - 1
-                                    ? 0
-                                    : 1,
-                              ),
+              isLoading
+                  ? SliverFillRemaining(child: _buildLoadingState())
+                  : displayedPosts.isEmpty
+                  ? SliverFillRemaining(child: _buildEmptyState())
+                  : SliverPadding(
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.sm,
+                        bottom: 100,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            if (index >= displayedPosts.length) return null;
+                            final currentPost = displayedPosts[index];
+                            return RepaintBoundary(
                               child: PostCard(
-                                key: ValueKey(
-                                  currentPost.id,
-                                ), // Stable key for performance
+                                key: ValueKey(currentPost.id),
                                 post: currentPost,
                                 likedByMe: likedPosts.contains(currentPost.id),
                                 onLike: () {
@@ -753,20 +690,17 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                                   _showReportSheet(currentPost);
                                 },
                               ),
-                            ),
-                          );
-                        },
-                        childCount: filteredPosts.length,
-                        // Performance optimizations for smooth scrolling
-                        addAutomaticKeepAlives:
-                            false, // Don't keep widgets alive - saves memory
-                        addRepaintBoundaries:
-                            true, // Better rendering performance
-                        addSemanticIndexes: false, // Reduce overhead
+                            );
+                          },
+                          childCount: displayedPosts.length,
+                          addAutomaticKeepAlives: false,
+                          addRepaintBoundaries: true,
+                          addSemanticIndexes: false,
+                        ),
                       ),
                     ),
-                  ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: _buildIOSFAB(),
@@ -774,7 +708,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // iOS-style floating action button
   Widget _buildIOSFAB() {
     return Container(
       width: 56,
@@ -833,7 +766,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  // iOS-style report action sheet
   void _showReportSheet(Post post) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -850,7 +782,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
               Container(
                 width: 36,
                 height: 5,
@@ -860,20 +791,14 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                   borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
-
               const SizedBox(height: AppSpacing.xl),
-
-              // Title
               Text(
                 'Report Post',
                 style: AppTypography.headline.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
               const SizedBox(height: AppSpacing.lg),
-
-              // Report options
               _buildReportOption(
                 icon: Icons.report_rounded,
                 title: 'Inappropriate Content',
@@ -889,10 +814,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 title: 'Harmful Content',
                 onTap: () => _handleReport(post, 'harmful'),
               ),
-
               const SizedBox(height: AppSpacing.lg),
-
-              // Cancel button
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(
@@ -919,7 +841,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                   ),
                 ),
               ),
-
               const SizedBox(height: AppSpacing.lg),
             ],
           ),
@@ -974,7 +895,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     // Report submitted silently - no notification needed
   }
 
-  /// Build premium iOS-style feed mode selector
   Widget _buildFeedModeButton() {
     return GestureDetector(
       onTap: () => _showPremiumFeedModeSheet(),
@@ -1002,8 +922,8 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_up,
+            const Icon(
+              Icons.keyboard_arrow_down, // Changed to down arrow for convention
               color: AppColors.textSecondary,
               size: 16,
             ),
@@ -1013,10 +933,8 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  /// Show premium iOS-style feed mode selection sheet
   void _showPremiumFeedModeSheet() {
     HapticFeedback.selectionClick();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1035,7 +953,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
             Container(
               width: 36,
               height: 4,
@@ -1045,13 +962,11 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
-                  Icon(Icons.tune, color: AppColors.primary, size: 20),
+                  const Icon(Icons.tune, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Feed Mode',
@@ -1062,10 +977,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 ],
               ),
             ),
-
-            // Feed mode options
             ...FeedMode.values.map((mode) => _buildPremiumFeedModeOption(mode)),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -1087,17 +999,16 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
+              ? AppColors.primary.withOpacity(0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 1,
+            width: 1.5,
           ),
         ),
         child: Row(
           children: [
-            // Icon with background
             Container(
               width: 40,
               height: 40,
@@ -1113,10 +1024,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 size: 20,
               ),
             ),
-
             const SizedBox(width: 16),
-
-            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1142,8 +1050,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                 ],
               ),
             ),
-
-            // Selection indicator
             if (isSelected)
               Container(
                 width: 20,
@@ -1193,7 +1099,6 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     }
   }
 
-  /// Build admin controls button
   Widget _buildAdminButton() {
     return IconButton(
       icon: Icon(
@@ -1212,29 +1117,22 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     );
   }
 
-  /// Handle admin actions on posts
   Future<void> _handleAdminAction(String action, String postId) async {
     try {
       switch (action) {
         case 'pin':
-          // Admin functionality temporarily disabled
           _showSuccessSnackBar('Post pinned');
           break;
         case 'hide':
-          // Admin functionality temporarily disabled
           _showSuccessSnackBar('Post hidden');
           break;
         case 'promote':
-          // Admin functionality temporarily disabled
           _showSuccessSnackBar('Post promoted');
           break;
         case 'delete':
-          // Admin functionality temporarily disabled
           _showSuccessSnackBar('Post deleted');
           break;
       }
-
-      // Refresh feed to show changes
       await _refreshFeed();
     } catch (e) {
       _showErrorSnackBar('Failed to perform action: $e');

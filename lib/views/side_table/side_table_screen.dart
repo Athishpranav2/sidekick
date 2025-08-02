@@ -49,10 +49,41 @@ class _SideTableScreenState extends State<SideTableScreen> {
           )
           .get();
 
+      // Check for unread messages in chat
+      final chatSnapshot = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('participants', arrayContains: user.uid)
+          .where(
+            'lastMessageTime',
+            isGreaterThan: Timestamp.fromDate(
+              DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          )
+          .get();
+
+      bool hasUnreadMessages = false;
+      for (var doc in chatSnapshot.docs) {
+        final data = doc.data();
+        final lastMessageBy = data['lastMessageBy'] as String?;
+        final lastMessageTime = data['lastMessageTime'] as Timestamp?;
+
+        // Check if message is from someone else and recent
+        if (lastMessageBy != null &&
+            lastMessageBy != user.uid &&
+            lastMessageTime != null &&
+            lastMessageTime.toDate().isAfter(
+              DateTime.now().subtract(const Duration(hours: 24)),
+            )) {
+          hasUnreadMessages = true;
+          break;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _hasActiveQueue = queueSnapshot.docs.isNotEmpty;
-          _hasRecentMatches = matchesSnapshot.docs.isNotEmpty;
+          _hasRecentMatches =
+              matchesSnapshot.docs.isNotEmpty || hasUnreadMessages;
         });
       }
     } catch (e) {
@@ -145,11 +176,11 @@ class _SideTableScreenState extends State<SideTableScreen> {
                 // Show indicator dot if user has active queue or recent matches
                 if (_hasActiveQueue || _hasRecentMatches)
                   Positioned(
-                    top: size.width * 0.02,
-                    right: size.width * 0.02,
+                    top: size.width * 0.015,
+                    right: size.width * 0.015,
                     child: Container(
-                      width: size.width * 0.025,
-                      height: size.width * 0.025,
+                      width: size.width * 0.03,
+                      height: size.width * 0.03,
                       decoration: BoxDecoration(
                         color: _hasActiveQueue
                             ? AppColors
@@ -157,18 +188,18 @@ class _SideTableScreenState extends State<SideTableScreen> {
                             : const Color(
                                 0xFF10B981,
                               ), // Green for recent matches
-                        borderRadius: BorderRadius.circular(
-                          size.width * 0.0125,
-                        ),
+                        borderRadius: BorderRadius.circular(size.width * 0.015),
+                        border: Border.all(color: Colors.black, width: 2),
                         boxShadow: [
                           BoxShadow(
                             color:
                                 (_hasActiveQueue
                                         ? AppColors.systemRed
                                         : const Color(0xFF10B981))
-                                    .withOpacity(0.4),
-                            blurRadius: 4,
-                            spreadRadius: 0.5,
+                                    .withOpacity(0.6),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),

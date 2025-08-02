@@ -139,11 +139,18 @@ class _MatchProgressScreenState extends State<MatchProgressScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: textPrimary)),
-        backgroundColor: criticalColor,
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: const Color(0xFFE53E3E), // Softer red
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

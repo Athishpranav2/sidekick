@@ -232,8 +232,19 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
     if (message != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF1C1C1E),
-          content: Text(message, style: const TextStyle(color: Colors.white)),
+          backgroundColor: const Color(0xFF1C1C1E), // Premium dark gray
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -247,11 +258,18 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: const Color(0xFF1C1C1E), // Premium dark gray
         content: Text(
           'Developer Mode: ${_isTestMode ? "ON" : "OFF"}',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -435,7 +453,19 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: You are not logged in.')),
+        SnackBar(
+          content: const Text(
+            'Error: You are not logged in.',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          ),
+          backgroundColor: const Color(0xFFE53E3E), // Softer red
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          duration: const Duration(seconds: 4),
+        ),
       );
       setState(() {
         _isJoiningQueue = false;
@@ -471,9 +501,24 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to join queue: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to join queue: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFFE53E3E), // Softer red
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            duration: const Duration(seconds: 4),
+          ),
+        );
         setState(() {
           _isJoiningQueue = false;
         });

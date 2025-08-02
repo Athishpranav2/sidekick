@@ -168,13 +168,20 @@ class MatchProgressController {
       if (_context.mounted) {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: const Text('Queue cancelled'),
-            backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
+            content: const Text(
+              'Queue cancelled',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF1C1C1E), // Premium dark gray
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -182,13 +189,20 @@ class MatchProgressController {
       if (_context.mounted) {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: Text('Failed to cancel queue: $e'),
-            backgroundColor: const Color(0xFFFF3B30), // primaryRed
+            content: Text(
+              'Failed to cancel queue: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFFE53E3E), // Softer red
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -208,13 +222,20 @@ class MatchProgressController {
       if (_context.mounted) {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: const Text('Match cancelled'),
-            backgroundColor: const Color(0xFF2C2C2E), // secondaryCardColor
+            content: const Text(
+              'Match cancelled',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF1C1C1E), // Premium dark gray
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -222,13 +243,20 @@ class MatchProgressController {
       if (_context.mounted) {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: Text('Failed to cancel match: $e'),
-            backgroundColor: const Color(0xFFFF3B30), // primaryRed
+            content: Text(
+              'Failed to cancel match: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFFE53E3E), // Softer red
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            duration: const Duration(seconds: 4),
           ),
         );
       }

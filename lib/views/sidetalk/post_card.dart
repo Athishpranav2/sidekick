@@ -4,7 +4,7 @@ import '../../models/post.dart';
 import '../../core/constants/app_colors.dart';
 import 'post_detail_screen.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   final Post post;
   final bool likedByMe;
   final VoidCallback? onLike;
@@ -20,9 +20,100 @@ class PostCard extends StatelessWidget {
     this.onReport,
   });
 
+  @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard>
+    with SingleTickerProviderStateMixin {
+  // Local state for optimistic updates
+  late bool _isLiked;
+  late int _likeCount;
+  bool _isProcessing = false;
+
+  // Simple animation controller for heart
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize local state
+    _isLiked = widget.likedByMe;
+    _likeCount = widget.post.likes;
+
+    // Simple scale animation
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Sync with parent when not processing
+    if (!_isProcessing) {
+      if (mounted &&
+          (oldWidget.likedByMe != widget.likedByMe ||
+              oldWidget.post.likes != widget.post.likes)) {
+        setState(() {
+          _isLiked = widget.likedByMe;
+          _likeCount = widget.post.likes;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // Handle like with optimistic update
+  void _handleLike() {
+    if (_isProcessing || widget.onLike == null) return;
+
+    // Immediate UI update
+    setState(() {
+      _isProcessing = true;
+      _isLiked = !_isLiked;
+      _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
+    });
+
+    // Immediate feedback
+    HapticFeedback.lightImpact();
+
+    // Animate if liked
+    if (_isLiked) {
+      _animationController.forward().then(
+        (_) => _animationController.reverse(),
+      );
+    }
+
+    // Call parent callback
+    widget.onLike!();
+
+    // Reset processing state after delay
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    });
+  }
+
   // iOS-style avatar with proper sizing
   Widget _buildAvatar() {
-    if (post.isAnonymous) {
+    if (widget.post.isAnonymous) {
       return Container(
         width: AppSpacing.avatarMedium,
         height: AppSpacing.avatarMedium,
@@ -38,8 +129,8 @@ class PostCard extends StatelessWidget {
         ),
       );
     } else {
-      String displayText = post.username != null
-          ? post.username!.substring(0, 1).toUpperCase()
+      String displayText = widget.post.username != null
+          ? widget.post.username!.substring(0, 1).toUpperCase()
           : 'U';
 
       return Container(
@@ -76,9 +167,9 @@ class PostCard extends StatelessWidget {
 
   // Twitter-style metadata with proper hierarchy
   Widget _buildHeader() {
-    String displayName = post.isAnonymous
+    String displayName = widget.post.isAnonymous
         ? 'Anonymous'
-        : post.username ?? 'User';
+        : widget.post.username ?? 'User';
 
     return Row(
       children: [
@@ -100,7 +191,7 @@ class PostCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (!post.isAnonymous) ...[
+                  if (!widget.post.isAnonymous) ...[
                     const SizedBox(width: AppSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -125,7 +216,7 @@ class PostCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '${post.timestamp} ago',
+                '${widget.post.timestamp} ago',
                 style: AppTypography.footnote.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -168,7 +259,7 @@ class PostCard extends StatelessWidget {
 
               // Post content with proper typography
               Text(
-                post.content,
+                widget.post.content,
                 style: AppTypography.body.copyWith(
                   color: AppColors.textPrimary,
                   height: 1.4,
@@ -183,24 +274,13 @@ class PostCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _buildActionButton(
-                        icon: likedByMe
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        count: post.likes,
-                        isActive: likedByMe,
-                        activeColor: AppColors.systemRed,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          onLike?.call();
-                        },
-                      ),
+                      _buildLikeButton(),
 
                       const SizedBox(width: AppSpacing.xl),
 
                       _buildActionButton(
                         icon: Icons.mode_comment_outlined,
-                        count: post.comments,
+                        count: widget.post.comments,
                         activeColor: AppColors.systemBlue,
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -216,7 +296,7 @@ class PostCard extends StatelessWidget {
                     activeColor: AppColors.systemOrange,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      onReport?.call();
+                      widget.onReport?.call();
                     },
                   ),
                 ],
@@ -228,7 +308,59 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  // Twitter-style action buttons
+  // Enhanced like button with simple animation
+  Widget _buildLikeButton() {
+    return GestureDetector(
+      onTap: _handleLike,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+          color: _isLiked
+              ? AppColors.systemRed.withOpacity(0.1)
+              : Colors.transparent,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    size: 18,
+                    color: _isLiked
+                        ? AppColors.systemRed
+                        : AppColors.textSecondary,
+                  ),
+                );
+              },
+            ),
+
+            if (_likeCount > 0) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                _likeCount.toString(),
+                style: AppTypography.footnote.copyWith(
+                  color: _isLiked
+                      ? AppColors.systemRed
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Regular action buttons
   Widget _buildActionButton({
     required IconData icon,
     int? count,
@@ -277,7 +409,7 @@ class PostCard extends StatelessWidget {
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            PostDetailScreen(post: post),
+            PostDetailScreen(post: widget.post),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
             position:
