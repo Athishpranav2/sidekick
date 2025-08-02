@@ -8,6 +8,7 @@ import '../../providers/user_provider.dart';
 import '../../models/user_model.dart';
 import '../../auth_service.dart';
 import 'edit_profile_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -449,7 +450,11 @@ class ProfileScreen extends StatelessWidget {
               color: const Color(0xFFDC2626),
               onTap: () {
                 HapticFeedback.lightImpact();
-                // TODO: Navigate to help
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const HelpSupportScreen(),
+                  ),
+                );
               },
             ),
             _buildModernOptionTile(
