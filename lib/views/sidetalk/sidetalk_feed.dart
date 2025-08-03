@@ -5,10 +5,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import 'post_card.dart';
+import 'ad_card.dart';
 import '../../models/post.dart';
+import '../../models/ad_model.dart';
 import '../../models/filter_options.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/cloud_feed_service.dart';
+import '../../core/services/ad_service.dart';
+import '../../core/services/admob_service.dart';
+import '../../widgets/banner_ad_widget.dart';
 import '../compose/compose_screen.dart';
 
 class SidetalkFeed extends StatefulWidget {
@@ -26,6 +31,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
 
   Set<String> likedPosts = <String>{};
   List<Post> posts = [];
+  List<AdModel> ads = [];
   bool isLoading = true;
   bool isRefreshing = false;
   bool isLoadingMore = false;
@@ -51,6 +57,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     super.initState();
     _initializeAdmin();
     _loadLikedPosts();
+    _loadAds();
     _loadInitialFeed();
   }
 
@@ -77,6 +84,41 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
         });
       }
     }
+  }
+
+  void _loadAds() async {
+    try {
+      final fetchedAds = await AdService.getAdsForFeedPositions();
+      if (mounted) {
+        setState(() {
+          ads = fetchedAds;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading ads: $e');
+      if (mounted) {
+        setState(() {
+          ads = [];
+        });
+      }
+    }
+  }
+
+  List<dynamic> _getFeedItems(List<Post> posts) {
+    final List<dynamic> feedItems = [];
+    final List<int> adPositions = [3, 7, 12]; // Show ads at these positions
+    int adIndex = 0;
+
+    for (int i = 0; i < posts.length; i++) {
+      feedItems.add(posts[i]);
+
+      // Insert Google AdMob banner ad at specific positions
+      if (adPositions.contains(i + 1)) {
+        feedItems.add('banner_ad');
+      }
+    }
+
+    return feedItems;
   }
 
   Future<void> _initializeAdmin() async {
@@ -608,6 +650,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
   @override
   Widget build(BuildContext context) {
     final displayedPosts = filteredPosts; // Calculate once per build
+    final feedItems = _getFeedItems(displayedPosts); // Combine posts and ads
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -675,8 +718,18 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            if (index >= displayedPosts.length) return null;
-                            final currentPost = displayedPosts[index];
+                            if (index >= feedItems.length) return null;
+                            final item = feedItems[index];
+
+                            // Check if item is a banner ad
+                            if (item == 'banner_ad') {
+                              return const RepaintBoundary(
+                                child: BannerAdWidget(),
+                              );
+                            }
+
+                            // Item is a post
+                            final currentPost = item as Post;
                             return RepaintBoundary(
                               child: PostCard(
                                 key: ValueKey(currentPost.id),
@@ -692,7 +745,7 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
                               ),
                             );
                           },
-                          childCount: displayedPosts.length,
+                          childCount: feedItems.length,
                           addAutomaticKeepAlives: false,
                           addRepaintBoundaries: true,
                           addSemanticIndexes: false,

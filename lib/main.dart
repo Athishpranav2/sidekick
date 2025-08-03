@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/services/admob_service.dart';
 
 import 'app.dart';
 
@@ -15,6 +16,9 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp();
+
+  // Initialize Google AdMob
+  await AdMobService.initialize();
 
   // Start the app
   runApp(const MyApp());
