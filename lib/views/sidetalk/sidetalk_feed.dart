@@ -655,105 +655,113 @@ class _SidetalkFeedState extends State<SidetalkFeed> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refreshFeed,
-          color: AppColors.systemRed,
-          backgroundColor: AppColors.secondaryBackground,
-          strokeWidth: 3.0,
-          displacement: 80.0,
-          edgeOffset: 0.0,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            cacheExtent: 1000,
-            slivers: [
-              SliverToBoxAdapter(
-                child: Container(
-                  color: AppColors.background,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Column(
-                      children: [
-                        Container(
-                          height: kToolbarHeight,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
+        child: Column(
+          children: [
+            // Fixed header
+            Container(
+              color: AppColors.background,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    Container(
+                      height: kToolbarHeight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'SIDETALK',
+                            style: AppTypography.headline.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'SIDETALK',
-                                style: AppTypography.headline.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const Spacer(),
-                              _buildFeedModeButton(),
-                              const SizedBox(width: AppSpacing.sm),
-                              _buildFilterButton(),
-                              if (isAdmin) ...[
-                                const SizedBox(width: AppSpacing.sm),
-                                _buildAdminButton(),
-                              ],
-                            ],
-                          ),
-                        ),
-                        Container(height: 0.5, color: AppColors.separator),
-                      ],
+                          const Spacer(),
+                          _buildFeedModeButton(),
+                          const SizedBox(width: AppSpacing.sm),
+                          _buildFilterButton(),
+                          if (isAdmin) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            _buildAdminButton(),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
+                    Container(height: 0.5, color: AppColors.separator),
+                  ],
                 ),
               ),
-              isLoading
-                  ? SliverFillRemaining(child: _buildLoadingState())
-                  : displayedPosts.isEmpty
-                  ? SliverFillRemaining(child: _buildEmptyState())
-                  : SliverPadding(
-                      padding: const EdgeInsets.only(
-                        top: AppSpacing.sm,
-                        bottom: 100,
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            if (index >= feedItems.length) return null;
-                            final item = feedItems[index];
+            ),
+            // Scrollable content
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refreshFeed,
+                color: AppColors.systemRed,
+                backgroundColor: AppColors.secondaryBackground,
+                strokeWidth: 3.0,
+                displacement: 80.0,
+                edgeOffset: 0.0,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  cacheExtent: 1000,
+                  slivers: [
+                    isLoading
+                        ? SliverFillRemaining(child: _buildLoadingState())
+                        : displayedPosts.isEmpty
+                        ? SliverFillRemaining(child: _buildEmptyState())
+                        : SliverPadding(
+                            padding: const EdgeInsets.only(
+                              top: AppSpacing.sm,
+                              bottom: 100,
+                            ),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  if (index >= feedItems.length) return null;
+                                  final item = feedItems[index];
 
-                            // Check if item is a banner ad
-                            if (item == 'banner_ad') {
-                              return const RepaintBoundary(
-                                child: BannerAdWidget(),
-                              );
-                            }
+                                  // Check if item is a banner ad
+                                  if (item == 'banner_ad') {
+                                    return const RepaintBoundary(
+                                      child: BannerAdWidget(),
+                                    );
+                                  }
 
-                            // Item is a post
-                            final currentPost = item as Post;
-                            return RepaintBoundary(
-                              child: PostCard(
-                                key: ValueKey(currentPost.id),
-                                post: currentPost,
-                                likedByMe: likedPosts.contains(currentPost.id),
-                                onLike: () {
-                                  HapticFeedback.lightImpact();
-                                  _toggleLike(currentPost.id);
+                                  // Item is a post
+                                  final currentPost = item as Post;
+                                  return RepaintBoundary(
+                                    child: PostCard(
+                                      key: ValueKey(currentPost.id),
+                                      post: currentPost,
+                                      likedByMe: likedPosts.contains(
+                                        currentPost.id,
+                                      ),
+                                      onLike: () {
+                                        HapticFeedback.lightImpact();
+                                        _toggleLike(currentPost.id);
+                                      },
+                                      onReport: () {
+                                        _showReportSheet(currentPost);
+                                      },
+                                    ),
+                                  );
                                 },
-                                onReport: () {
-                                  _showReportSheet(currentPost);
-                                },
+                                childCount: feedItems.length,
+                                addAutomaticKeepAlives: false,
+                                addRepaintBoundaries: true,
+                                addSemanticIndexes: false,
                               ),
-                            );
-                          },
-                          childCount: feedItems.length,
-                          addAutomaticKeepAlives: false,
-                          addRepaintBoundaries: true,
-                          addSemanticIndexes: false,
-                        ),
-                      ),
-                    ),
-            ],
-          ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: _buildIOSFAB(),

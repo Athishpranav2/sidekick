@@ -8,6 +8,7 @@ import 'package:sidekick/views/sidetalk/filter_button.dart';
 import 'package:sidekick/views/sidetalk/post_card.dart';
 import 'package:sidekick/models/post.dart';
 import 'package:sidekick/views/sidetalk/comment_thread_modal.dart';
+import 'package:sidekick/core/constants/app_colors.dart';
 
 // ========== STYLE CONSTANTS ==========
 const Color kBlack = Colors.black;
@@ -31,12 +32,6 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
   final _scrollController = ScrollController();
   bool _showHowItWorks =
       true; // Controls visibility of the how it works overlay
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   void _hideHowItWorks() {
     setState(() {
@@ -66,21 +61,18 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                       children: [
                         Text(
                           'SIDETALK',
-                          style: TextStyle(
+                          style: AppTypography.caption1.copyWith(
                             color: Colors.grey[500],
-                            fontSize: size.width * 0.03,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
-                            fontFamily: 'BebasNeue',
                           ),
                         ),
                         SizedBox(height: size.height * 0.01),
                         Text(
                           'Your safe space to be unhinged.',
-                          style: TextStyle(
+                          style: AppTypography.title1.copyWith(
                             color: Colors.white,
-                            fontSize: size.width * 0.07,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -102,9 +94,8 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                       children: [
                         Text(
                           'HOW IT WORKS',
-                          style: TextStyle(
+                          style: AppTypography.headline.copyWith(
                             color: Colors.grey[500],
-                            fontSize: size.width * 0.04,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.1,
                           ),
@@ -157,10 +148,9 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
                       ),
                       child: Text(
                         'GET STARTED',
-                        style: TextStyle(
+                        style: AppTypography.callout.copyWith(
                           color: Colors.white,
-                          fontSize: size.width * 0.042,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: 1.1,
                         ),
                       ),
@@ -200,18 +190,16 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
             children: [
               Text(
                 title,
-                style: TextStyle(
+                style: AppTypography.subheadline.copyWith(
                   color: Colors.white,
-                  fontSize: size.width * 0.045,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(height: size.height * 0.005),
               Text(
                 subtitle,
-                style: TextStyle(
+                style: AppTypography.body.copyWith(
                   color: Colors.grey[400],
-                  fontSize: size.width * 0.038,
                   height: 1.4,
                 ),
               ),
@@ -269,13 +257,12 @@ class _VentCornerScreenState extends State<VentCornerScreen> {
       backgroundColor: kBlack,
       elevation: 0,
       centerTitle: false,
-      title: const Padding(
-        padding: EdgeInsets.only(left: 8.0),
+      title: Padding(
+        padding: const EdgeInsets.only(left: 8.0),
         child: Text(
           'SIDETALK',
-          style: TextStyle(
+          style: AppTypography.title3.copyWith(
             color: kGray, // subtle grey
-            fontSize: 18,
             fontWeight: FontWeight.w700,
             letterSpacing: 1,
           ),

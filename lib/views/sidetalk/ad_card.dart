@@ -56,9 +56,8 @@ class AdCard extends StatelessWidget {
                           if (ad.sponsorName != null)
                             Text(
                               ad.sponsorName!,
-                              style: const TextStyle(
-                                color: Color(0xFF8E8E93),
-                                fontSize: 13,
+                              style: AppTypography.footnote.copyWith(
+                                color: const Color(0xFF8E8E93),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -66,9 +65,8 @@ class AdCard extends StatelessWidget {
                             children: [
                               Text(
                                 'Sponsored',
-                                style: TextStyle(
+                                style: AppTypography.caption1.copyWith(
                                   color: AppColors.systemRed.withOpacity(0.8),
-                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -111,9 +109,8 @@ class AdCard extends StatelessWidget {
                 // Title
                 Text(
                   ad.title,
-                  style: const TextStyle(
+                  style: AppTypography.title2.copyWith(
                     color: Colors.white,
-                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,
                   ),
@@ -123,9 +120,8 @@ class AdCard extends StatelessWidget {
                 // Description
                 Text(
                   ad.description,
-                  style: const TextStyle(
-                    color: Color(0xFF8E8E93),
-                    fontSize: 15,
+                  style: AppTypography.subheadline.copyWith(
+                    color: const Color(0xFF8E8E93),
                     height: 1.4,
                     letterSpacing: -0.1,
                   ),
@@ -144,9 +140,8 @@ class AdCard extends StatelessWidget {
                     child: Center(
                       child: Text(
                         ad.callToAction!,
-                        style: const TextStyle(
+                        style: AppTypography.callout.copyWith(
                           color: Colors.white,
-                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),

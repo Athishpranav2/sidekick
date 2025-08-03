@@ -51,119 +51,119 @@ class AppColors {
   static const Color shadowUltra = Color(0x80000000); // Ultra premium shadow
 }
 
-/// iOS Native Typography System - SF Pro Display
+/// Cross-Platform Typography System - Inter Font
 class AppTypography {
-  // iOS system font
-  static const String systemFont = '.SF Pro Display';
+  // Modern cross-platform font that looks great on both iOS and Android
+  static const String systemFont = 'Inter';
 
-  // iOS Large Title (iOS 11+)
+  // Large Title - optimized for Android readability
   static const TextStyle largeTitle = TextStyle(
     fontFamily: systemFont,
     fontSize: 34,
     fontWeight: FontWeight.w700,
-    letterSpacing: -0.4,
-    color: AppColors.textPrimary,
-    height: 1.12,
-  );
-
-  // iOS Title 1
-  static const TextStyle title1 = TextStyle(
-    fontFamily: systemFont,
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.4,
-    color: AppColors.textPrimary,
-    height: 1.14,
-  );
-
-  // iOS Title 2
-  static const TextStyle title2 = TextStyle(
-    fontFamily: systemFont,
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
-    color: AppColors.textPrimary,
-    height: 1.18,
-  );
-
-  // iOS Title 3 - for navigation titles
-  static const TextStyle title3 = TextStyle(
-    fontFamily: systemFont,
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
     color: AppColors.textPrimary,
     height: 1.2,
   );
 
-  // iOS Headline
+  // Title 1
+  static const TextStyle title1 = TextStyle(
+    fontFamily: systemFont,
+    fontSize: 28,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.2,
+    color: AppColors.textPrimary,
+    height: 1.25,
+  );
+
+  // Title 2
+  static const TextStyle title2 = TextStyle(
+    fontFamily: systemFont,
+    fontSize: 22,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    color: AppColors.textPrimary,
+    height: 1.3,
+  );
+
+  // Title 3 - for navigation titles
+  static const TextStyle title3 = TextStyle(
+    fontFamily: systemFont,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    color: AppColors.textPrimary,
+    height: 1.35,
+  );
+
+  // Headline
   static const TextStyle headline = TextStyle(
     fontFamily: systemFont,
     fontSize: 17,
     fontWeight: FontWeight.w600,
-    letterSpacing: -0.4,
+    letterSpacing: -0.1,
     color: AppColors.textPrimary,
-    height: 1.29,
+    height: 1.4,
   );
 
-  // iOS Body - main content text
+  // Body - main content text, optimized for Android
   static const TextStyle body = TextStyle(
-    fontFamily: systemFont,
-    fontSize: 17,
-    fontWeight: FontWeight.w400,
-    letterSpacing: -0.4,
-    color: AppColors.textPrimary,
-    height: 1.29,
-  );
-
-  // iOS Callout
-  static const TextStyle callout = TextStyle(
     fontFamily: systemFont,
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
     color: AppColors.textPrimary,
-    height: 1.31,
+    height: 1.5,
   );
 
-  // iOS Subheadline
+  // Callout
+  static const TextStyle callout = TextStyle(
+    fontFamily: systemFont,
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0,
+    color: AppColors.textPrimary,
+    height: 1.5,
+  );
+
+  // Subheadline
   static const TextStyle subheadline = TextStyle(
     fontFamily: systemFont,
     fontSize: 15,
     fontWeight: FontWeight.w400,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: AppColors.textPrimary,
-    height: 1.33,
+    height: 1.45,
   );
 
-  // iOS Footnote
+  // Footnote
   static const TextStyle footnote = TextStyle(
     fontFamily: systemFont,
     fontSize: 13,
     fontWeight: FontWeight.w400,
-    letterSpacing: -0.1,
+    letterSpacing: 0.1,
     color: AppColors.textSecondary,
-    height: 1.38,
+    height: 1.4,
   );
 
-  // iOS Caption 1
+  // Caption 1
   static const TextStyle caption1 = TextStyle(
     fontFamily: systemFont,
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    letterSpacing: 0,
+    letterSpacing: 0.2,
     color: AppColors.textSecondary,
-    height: 1.33,
+    height: 1.4,
   );
 
-  // iOS Caption 2
+  // Caption 2
   static const TextStyle caption2 = TextStyle(
     fontFamily: systemFont,
     fontSize: 11,
     fontWeight: FontWeight.w400,
-    letterSpacing: 0.1,
+    letterSpacing: 0.3,
     color: AppColors.textTertiary,
-    height: 1.36,
+    height: 1.4,
   );
 }
 
