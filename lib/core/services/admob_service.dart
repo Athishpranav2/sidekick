@@ -47,7 +47,8 @@ class AdMobService {
   static BannerAd createBannerAd() {
     return BannerAd(
       adUnitId: bannerAdUnitId,
-      size: AdSize.banner,
+      size: AdSize
+          .largeBanner, // Changed from AdSize.banner to AdSize.largeBanner (320x100)
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
