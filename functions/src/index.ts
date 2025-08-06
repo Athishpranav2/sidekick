@@ -244,6 +244,16 @@ async function findOptimalPairFromAvailable(
         score += 20;
       }
 
+      // Class preference bonus
+      const user1ClassPreference = user1.data().classPreference || 'any';
+      const user2ClassPreference = user2.data().classPreference || 'any';
+      const sameClass = areUsersFromSameClass(user1Profile, user2Profile);
+      
+      // Bonus for matching class preferences
+      if (user1ClassPreference === 'different_class' && user2ClassPreference === 'different_class' && !sameClass) {
+        score += 15; // Both prefer different class and they are from different classes
+      }
+
       // Small randomization for tie-breaking
       score += Math.random() * 5;
 
@@ -312,6 +322,10 @@ async function createMatchWithinTransaction(
       [userId1]: user1Data.matchPreference || 'any',
       [userId2]: user2Data.matchPreference || 'any'
     },
+    classPreferences: {
+      [userId1]: user1Data.classPreference || 'any',
+      [userId2]: user2Data.classPreference || 'any'
+    },
     _createdBy: "optimized_matcher_v2_fixed",
     _version: "2.2"
   };
@@ -337,7 +351,7 @@ async function createMatchWithinTransaction(
   });
 
   logger.info(
-    `✅ Match created in transaction: ${userId1} & ${userId2} for ${timeSlot}. Preferences: ${user1Data.matchPreference || 'any'}/${user2Data.matchPreference || 'any'}`
+    `✅ Match created in transaction: ${userId1} & ${userId2} for ${timeSlot}. Gender prefs: ${user1Data.matchPreference || 'any'}/${user2Data.matchPreference || 'any'}, Class prefs: ${user1Data.classPreference || 'any'}/${user2Data.classPreference || 'any'}`
   );
 }
 
@@ -382,7 +396,39 @@ async function getUserProfiles(userIds: string[]): Promise<Map<string, any>> {
 }
 
 /**
- * Check if two users are compatible based on gender preferences.
+ * Extract roll number from email
+ */
+function extractRollNumberFromEmail(email: string): string | null {
+  if (!email) return null;
+  
+  // Extract roll number from email like "23Z310@PSGTECH.AC.IN"
+  const regex = /^([A-Z0-9]+)@PSGTECH\.AC\.IN$/i;
+  const match = email.match(regex);
+  
+  return match ? match[1] : null;
+}
+
+/**
+ * Check if two users are from the same class based on roll number
+ */
+function areUsersFromSameClass(user1Profile: any, user2Profile: any): boolean {
+  const roll1 = user1Profile?.rollNumber || extractRollNumberFromEmail(user1Profile?.email);
+  const roll2 = user2Profile?.rollNumber || extractRollNumberFromEmail(user2Profile?.email);
+  
+  if (!roll1 || !roll2) {
+    logger.warn(`⚠️ Missing roll number for users`);
+    return false;
+  }
+  
+  // Check if first 4 characters match (same class)
+  const class1 = roll1.substring(0, 4);
+  const class2 = roll2.substring(0, 4);
+  
+  return class1 === class2;
+}
+
+/**
+ * Check if two users are compatible based on gender and class preferences.
  */
 function areUsersCompatible(
   user1Data: any, 
@@ -392,6 +438,8 @@ function areUsersCompatible(
 ): boolean {
   const user1Preference = user1Data.matchPreference || 'any';
   const user2Preference = user2Data.matchPreference || 'any';
+  const user1ClassPreference = user1Data.classPreference || 'any';
+  const user2ClassPreference = user2Data.classPreference || 'any';
   
   const user1Gender = user1Profile?.gender;
   const user2Gender = user2Profile?.gender;
@@ -402,13 +450,25 @@ function areUsersCompatible(
     return true;
   }
 
-  // Check user1's preference
+  // Check gender compatibility
   if (user1Preference === 'same_gender' && user1Gender !== user2Gender) {
     return false;
   }
 
-  // Check user2's preference  
   if (user2Preference === 'same_gender' && user1Gender !== user2Gender) {
+    return false;
+  }
+
+  // Check class compatibility (avoid same class if preference is 'different_class')
+  const sameClass = areUsersFromSameClass(user1Profile, user2Profile);
+  
+  if (user1ClassPreference === 'different_class' && sameClass) {
+    logger.info(`🚫 User ${user1Data.userId} prefers different class, but both users are from same class`);
+    return false;
+  }
+  
+  if (user2ClassPreference === 'different_class' && sameClass) {
+    logger.info(`🚫 User ${user2Data.userId} prefers different class, but both users are from same class`);
     return false;
   }
 

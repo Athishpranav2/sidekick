@@ -51,7 +51,9 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
   bool _isJoiningQueue = false;
   bool _isUserMatched = false; // New field to track if user is already matched
   bool _isLoadingStatus = true; // Track loading state
-  bool _matchOnlySameGender = false; // New state for the gender toggle
+  bool _matchOnlySameGender = false; // State for the gender toggle
+  bool _doNotMatchWithMyClass =
+      false; // NEW: State for avoiding same class matches
   late AnimationController _popupAnimationController;
   late AnimationController _scaleAnimationController;
   late Animation<double> _scaleAnimation;
@@ -381,7 +383,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
 
           // Subtitle with improved readability
           Text(
-            'You will be matched with someone and we\'ll notify you when it\'s time to meet.',
+            'We\'ll connect you with someone and notify you when it\'s time to meet.',
             style: TextStyle(
               color: Colors.grey[400],
               fontSize: 16,
@@ -486,8 +488,11 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
           'timeSlot': slot.time,
           'status': 'waiting',
           'createdAt': FieldValue.serverTimestamp(),
-          // ADDED: Include the gender matching preference in the queue data
+          // Include both gender and class matching preferences
           'matchPreference': _matchOnlySameGender ? 'same_gender' : 'any',
+          'classPreference': _doNotMatchWithMyClass
+              ? 'different_class'
+              : 'any', // NEW: Class preference
         });
       }
 
@@ -582,8 +587,8 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
                       ],
                     ),
                   ),
-                  // ADDED: Gender preference toggle
-                  _buildGenderToggle(size),
+                  // UPDATED: Both preference toggles
+                  _buildPreferenceToggles(size),
                   _buildConfirmButton(size),
                   SizedBox(height: size.height * 0.05),
                 ],
@@ -592,31 +597,62 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
     );
   }
 
-  // NEW WIDGET: For the gender preference toggle
-  Widget _buildGenderToggle(Size size) {
+  // UPDATED: Combined widget for both preference toggles
+  Widget _buildPreferenceToggles(Size size) {
     return Padding(
       padding: EdgeInsets.only(bottom: size.height * 0.02),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          Text(
-            'Match with my gender only',
-            style: TextStyle(
-              color: Colors.grey[300],
-              fontSize: size.width * 0.04,
-              fontWeight: FontWeight.w500,
-            ),
+          // Gender preference toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Same gender only',
+                style: TextStyle(
+                  color: Colors.grey[300],
+                  fontSize: size.width * 0.04,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              CupertinoSwitch(
+                value: _matchOnlySameGender,
+                onChanged: (value) {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _matchOnlySameGender = value;
+                  });
+                },
+                activeColor: AppColors.systemRed,
+                trackColor: const Color(0xFF2C2C2E),
+              ),
+            ],
           ),
-          CupertinoSwitch(
-            value: _matchOnlySameGender,
-            onChanged: (value) {
-              HapticFeedback.lightImpact();
-              setState(() {
-                _matchOnlySameGender = value;
-              });
-            },
-            activeColor: AppColors.systemRed,
-            trackColor: const Color(0xFF2C2C2E),
+          SizedBox(height: size.height * 0.015),
+          // NEW: Class preference toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Avoid my class',
+                style: TextStyle(
+                  color: Colors.grey[300],
+                  fontSize: size.width * 0.04,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              CupertinoSwitch(
+                value: _doNotMatchWithMyClass,
+                onChanged: (value) {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _doNotMatchWithMyClass = value;
+                  });
+                },
+                activeColor: AppColors.systemRed,
+                trackColor: const Color(0xFF2C2C2E),
+              ),
+            ],
           ),
         ],
       ),
@@ -653,7 +689,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
             ),
             SizedBox(height: size.height * 0.04),
             Text(
-              'You\'re Already Matched!',
+              'You\'re Already Connected!',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: size.width * 0.06,
@@ -663,7 +699,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
             ),
             SizedBox(height: size.height * 0.02),
             Text(
-              'You have an active match session. Complete your current meetup before joining a new queue.',
+              'You have an active meetup. Complete your current session before joining a new queue.',
               style: TextStyle(
                 color: Colors.grey[400],
                 fontSize: size.width * 0.04,
@@ -690,7 +726,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
                 ),
                 child: Center(
                   child: Text(
-                    'Go to Current Match',
+                    'Go to Current Meetup',
                     style: TextStyle(
                       fontSize: size.width * 0.042,
                       fontWeight: FontWeight.bold,
@@ -896,7 +932,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
 
     String buttonText = 'Select a Time';
     if (_isUserMatched) {
-      buttonText = 'Already Matched';
+      buttonText = 'Already Connected';
     } else if (_selectedTimes.isNotEmpty && !hasValidTimes) {
       buttonText = 'Selected Times Are Closed';
     } else if (canConfirm) {

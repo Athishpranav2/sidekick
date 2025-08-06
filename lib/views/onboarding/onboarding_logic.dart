@@ -128,6 +128,21 @@ class OnboardingLogic {
     return suggestions.take(5).toList();
   }
 
+  // Extract roll number from email
+  static String? extractRollNumberFromEmail(String? email) {
+    if (email == null || email.isEmpty) return null;
+    
+    // Extract roll number from email like "23Z310@PSGTECH.AC.IN"
+    final regex = RegExp(r'^([A-Z0-9]+)@PSGTECH\.AC\.IN$', caseSensitive: false);
+    final match = regex.firstMatch(email);
+    
+    if (match != null && match.groupCount >= 1) {
+      return match.group(1);
+    }
+    
+    return null;
+  }
+
   // Complete onboarding process
   static Future<void> completeOnboarding({
     required String username,
@@ -145,6 +160,9 @@ class OnboardingLogic {
         throw Exception('Username is no longer available');
       }
 
+      // Extract roll number from email
+      final rollNumber = extractRollNumberFromEmail(user.email);
+
       // Create user document
       final userData = {
         'username': username.trim(),
@@ -155,6 +173,7 @@ class OnboardingLogic {
         'department': department,
         'year': year,
         'gender': gender, // Storing gender in Firestore
+        'rollNumber': rollNumber, // Store extracted roll number
         'onboardingCompleted': true,
         'createdAt': FieldValue.serverTimestamp(),
         'lastLoginAt': FieldValue.serverTimestamp(),
