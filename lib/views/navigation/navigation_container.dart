@@ -48,19 +48,19 @@ class _NavigationContainerState extends State<NavigationContainer> {
           // Re-ordered the navigation items
           items: <BottomNavigationBarItem>[
             BottomNavigationBarItem(
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              activeIcon: const Icon(Icons.chat_bubble_rounded),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
+              activeIcon: const Icon(Icons.chat_bubble_rounded, size: 22),
               label: 'SideTalk',
             ),
             // The new middle item with a table icon
             BottomNavigationBarItem(
-              icon: const Icon(Icons.table_restaurant_outlined),
-              activeIcon: const Icon(Icons.table_restaurant),
+              icon: const Icon(Icons.table_restaurant_outlined, size: 22),
+              activeIcon: const Icon(Icons.table_restaurant, size: 22),
               label: 'Side Table',
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline),
-              activeIcon: const Icon(Icons.person),
+              icon: const Icon(Icons.person_outline, size: 22),
+              activeIcon: const Icon(Icons.person, size: 22),
               label: 'Profile',
             ),
           ],
@@ -70,17 +70,17 @@ class _NavigationContainerState extends State<NavigationContainer> {
           // This type prevents the "spreading" animation and keeps items fixed
           type: BottomNavigationBarType.fixed,
           selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.grey[700],
+          unselectedItemColor: const Color(0xFF8E8E93),
           selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
           ),
           unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            fontSize: 11,
           ),
           elevation: 0, // Clean, modern look with no shadow
-          iconSize: 28,
+          iconSize: 22,
         ),
       ),
     );

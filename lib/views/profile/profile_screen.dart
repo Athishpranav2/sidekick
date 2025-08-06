@@ -11,6 +11,7 @@ import '../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
 import 'user_posts_screen.dart';
+import 'about_app_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -492,7 +493,11 @@ class ProfileScreen extends StatelessWidget {
               color: AppColors.systemRed,
               onTap: () {
                 HapticFeedback.lightImpact();
-                // TODO: Navigate to about
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AboutAppScreen(),
+                  ),
+                );
               },
             ),
             _buildModernOptionTile(
