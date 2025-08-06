@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'time_selection_screen.dart'; // Import the new screen
 import 'match_progress_screen.dart'; // Import the match progress screen
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,76 +19,120 @@ class SideTableScreen extends StatefulWidget {
 class _SideTableScreenState extends State<SideTableScreen> {
   bool _hasActiveQueue = false;
   bool _hasRecentMatches = false;
+  StreamSubscription<QuerySnapshot>? _queueSubscription;
+  StreamSubscription<QuerySnapshot>? _matchesSubscription;
+  StreamSubscription<QuerySnapshot>? _chatSubscription;
 
   @override
   void initState() {
     super.initState();
-    _checkUserStatus();
+    _setupRealTimeListeners();
   }
 
-  Future<void> _checkUserStatus() async {
+  @override
+  void dispose() {
+    _queueSubscription?.cancel();
+    _matchesSubscription?.cancel();
+    _chatSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealTimeListeners() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     try {
-      // Check for active queue entries
-      final queueSnapshot = await FirebaseFirestore.instance
+      // Listen for active queue entries in real-time
+      _queueSubscription = FirebaseFirestore.instance
           .collection('matchingQueue')
           .where('userId', isEqualTo: user.uid)
           .where('status', isEqualTo: 'waiting')
-          .get();
+          .snapshots()
+          .listen((snapshot) {
+            if (mounted) {
+              setState(() {
+                _hasActiveQueue = snapshot.docs.isNotEmpty;
+              });
+            }
+          });
 
-      // Check for recent matches (today)
+      // Listen for recent matches in real-time
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
-      final matchesSnapshot = await FirebaseFirestore.instance
+      _matchesSubscription = FirebaseFirestore.instance
           .collection('matches')
           .where('users', arrayContains: user.uid)
           .where(
             'matchedAt',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
           )
-          .get();
+          .snapshots()
+          .listen((snapshot) {
+            if (mounted) {
+              _updateRecentMatchesStatus(snapshot.docs.isNotEmpty);
+            }
+          });
 
-      // Check for unread messages in chat
-      final chatSnapshot = await FirebaseFirestore.instance
-          .collection('chats')
-          .where('participants', arrayContains: user.uid)
-          .where(
-            'lastMessageTime',
-            isGreaterThan: Timestamp.fromDate(
-              DateTime.now().subtract(const Duration(days: 1)),
-            ),
-          )
-          .get();
+      // Listen for recent chat messages in real-time
+      _chatSubscription = FirebaseFirestore.instance
+          .collection('matches')
+          .where('users', arrayContains: user.uid)
+          .where('status', isEqualTo: 'active')
+          .snapshots()
+          .listen((snapshot) {
+            if (mounted) {
+              _checkForRecentMessages(snapshot.docs);
+            }
+          });
+    } catch (e) {
+      print('Error setting up real-time listeners: $e');
+    }
+  }
 
-      bool hasUnreadMessages = false;
-      for (var doc in chatSnapshot.docs) {
-        final data = doc.data();
-        final lastMessageBy = data['lastMessageBy'] as String?;
-        final lastMessageTime = data['lastMessageTime'] as Timestamp?;
+  void _updateRecentMatchesStatus(bool hasMatches) {
+    if (mounted) {
+      setState(() {
+        _hasRecentMatches = hasMatches;
+      });
+    }
+  }
 
-        // Check if message is from someone else and recent
-        if (lastMessageBy != null &&
-            lastMessageBy != user.uid &&
-            lastMessageTime != null &&
-            lastMessageTime.toDate().isAfter(
-              DateTime.now().subtract(const Duration(hours: 24)),
-            )) {
-          hasUnreadMessages = true;
-          break;
-        }
-      }
-
+  void _checkForRecentMessages(List<QueryDocumentSnapshot> matchDocs) {
+    if (matchDocs.isEmpty) {
       if (mounted) {
         setState(() {
-          _hasActiveQueue = queueSnapshot.docs.isNotEmpty;
-          _hasRecentMatches =
-              matchesSnapshot.docs.isNotEmpty || hasUnreadMessages;
+          _hasRecentMatches = false;
         });
       }
-    } catch (e) {
-      // Handle error silently
+      return;
+    }
+
+    // Check for recent messages in active matches
+    for (var matchDoc in matchDocs) {
+      final matchData = matchDoc.data() as Map<String, dynamic>;
+      final matchedAt = matchData['matchedAt'] as Timestamp?;
+
+      if (matchedAt != null) {
+        final matchTime = matchedAt.toDate();
+        final now = DateTime.now();
+
+        // If match was created in the last 24 hours, consider it recent
+        if (now.difference(matchTime).inHours < 24) {
+          if (mounted) {
+            setState(() {
+              _hasRecentMatches = true;
+            });
+          }
+          return;
+        }
+      }
+    }
+
+    // If no recent matches found, set to false
+    if (mounted) {
+      setState(() {
+        _hasRecentMatches = false;
+      });
     }
   }
 
@@ -110,15 +155,20 @@ class _SideTableScreenState extends State<SideTableScreen> {
             children: [
               // Top section with notification icon
               SizedBox(height: size.height * 0.02),
-              _buildTopSection(context, size),
               SizedBox(height: size.height * 0.06),
-              Text(
-                'Side Table',
-                style: TextStyle(
-                  fontSize: size.width * 0.045, // Adaptive font size
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white70,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Side Table',
+                    style: TextStyle(
+                      fontSize: size.width * 0.045, // Adaptive font size
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  _buildNotificationBell(context, size),
+                ],
               ),
               SizedBox(height: size.height * 0.015), // Adaptive spacing
               Text(
@@ -143,73 +193,64 @@ class _SideTableScreenState extends State<SideTableScreen> {
     );
   }
 
-  Widget _buildTopSection(BuildContext context, Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const MatchProgressScreen(),
+  Widget _buildNotificationBell(BuildContext context, Size size) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const MatchProgressScreen()),
+        );
+      },
+      child: Container(
+        width: size.width * 0.11,
+        height: size.width * 0.11,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(size.width * 0.055),
+          border: Border.all(color: const Color(0xFF2C2C2E), width: 1),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: Colors.white70,
+                size: size.width * 0.055,
               ),
-            );
-          },
-          child: Container(
-            width: size.width * 0.11,
-            height: size.width * 0.11,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
-              borderRadius: BorderRadius.circular(size.width * 0.055),
-              border: Border.all(color: const Color(0xFF2C2C2E), width: 1),
             ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    Icons.notifications_none_rounded,
-                    color: Colors.white70,
-                    size: size.width * 0.055,
+            // Show indicator dot only when there's actual activity
+            if (_hasActiveQueue || (_hasRecentMatches && !_hasActiveQueue))
+              Positioned(
+                top: size.width * 0.015,
+                right: size.width * 0.015,
+                child: Container(
+                  width: size.width * 0.03,
+                  height: size.width * 0.03,
+                  decoration: BoxDecoration(
+                    color: _hasActiveQueue
+                        ? AppColors
+                              .systemRed // Red for active queue
+                        : const Color(0xFF10B981), // Green for recent matches
+                    borderRadius: BorderRadius.circular(size.width * 0.015),
+                    border: Border.all(color: Colors.black, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            (_hasActiveQueue
+                                    ? AppColors.systemRed
+                                    : const Color(0xFF10B981))
+                                .withOpacity(0.6),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
-                // Show indicator dot if user has active queue or recent matches
-                if (_hasActiveQueue || _hasRecentMatches)
-                  Positioned(
-                    top: size.width * 0.015,
-                    right: size.width * 0.015,
-                    child: Container(
-                      width: size.width * 0.03,
-                      height: size.width * 0.03,
-                      decoration: BoxDecoration(
-                        color: _hasActiveQueue
-                            ? AppColors
-                                  .systemRed // Red for active queue
-                            : const Color(
-                                0xFF10B981,
-                              ), // Green for recent matches
-                        borderRadius: BorderRadius.circular(size.width * 0.015),
-                        border: Border.all(color: Colors.black, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                (_hasActiveQueue
-                                        ? AppColors.systemRed
-                                        : const Color(0xFF10B981))
-                                    .withOpacity(0.6),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

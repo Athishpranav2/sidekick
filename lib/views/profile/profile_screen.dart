@@ -10,6 +10,7 @@ import '../../auth_service.dart';
 import '../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
+import 'user_posts_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -49,9 +50,17 @@ class ProfileScreen extends StatelessWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () => userProvider.fetchUserData(user.uid),
+            onRefresh: () async {
+              HapticFeedback.mediumImpact();
+              // Add a small delay for better UX
+              await Future.delayed(const Duration(milliseconds: 300));
+              await userProvider.fetchUserData(user.uid);
+            },
             backgroundColor: const Color(0xFF1C1C1E),
-            color: Colors.white,
+            color: const Color(0xFFFF453A),
+            strokeWidth: 2.5,
+            displacement: 100.0,
+            triggerMode: RefreshIndicatorTriggerMode.anywhere,
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
@@ -167,14 +176,19 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      user.displayName ?? 'User',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
+                    Flexible(
+                      child: Text(
+                        user.displayName ?? 'User',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -330,12 +344,25 @@ class ProfileScreen extends StatelessWidget {
             child: FutureBuilder<int>(
               future: _getConfessionsCount(user.uid),
               builder: (context, snapshot) {
-                return _buildModernStatCard(
-                  title: 'Confessions',
-                  value: snapshot.data?.toString() ?? '0',
-                  icon: CupertinoIcons.chat_bubble_text_fill,
-                  color: AppColors.systemRed,
-                  size: size,
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => UserPostsScreen(
+                          userId: user.uid,
+                          displayName: user.displayName ?? 'User',
+                        ),
+                      ),
+                    );
+                  },
+                  child: _buildModernStatCard(
+                    title: 'Confessions',
+                    value: snapshot.data?.toString() ?? '0',
+                    icon: CupertinoIcons.chat_bubble_text_fill,
+                    color: AppColors.systemRed,
+                    size: size,
+                  ),
                 );
               },
             ),
