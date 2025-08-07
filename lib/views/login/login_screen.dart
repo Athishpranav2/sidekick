@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../auth_service.dart';
+import '../profile/terms_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -209,7 +211,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFDC2626).withValues(alpha: 0.25),
+                            color: const Color(
+                              0xFFDC2626,
+                            ).withValues(alpha: 0.25),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -287,7 +291,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const TermsScreen(),
+                              ),
+                            );
+                          },
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4,
@@ -315,7 +326,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const TermsScreen(),
+                              ),
+                            );
+                          },
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4,

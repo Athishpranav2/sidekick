@@ -12,9 +12,12 @@ import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
 import 'user_posts_screen.dart';
 import 'about_app_screen.dart';
+import 'terms_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -456,16 +459,7 @@ class ProfileScreen extends StatelessWidget {
                 // TODO: Navigate to notifications
               },
             ),
-            _buildModernOptionTile(
-              icon: CupertinoIcons.shield_lefthalf_fill,
-              title: 'Privacy & Security',
-              subtitle: 'Control your data',
-              color: AppColors.systemRed,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                // TODO: Navigate to privacy
-              },
-            ),
+
           ],
         ),
         const SizedBox(height: 32),
@@ -496,6 +490,20 @@ class ProfileScreen extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const AboutAppScreen(),
+                  ),
+                );
+              },
+            ),
+            _buildModernOptionTile(
+              icon: CupertinoIcons.doc_text_fill,
+              title: 'Terms of Service',
+              subtitle: 'View terms and conditions',
+              color: AppColors.systemRed,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const TermsScreen(),
                   ),
                 );
               },

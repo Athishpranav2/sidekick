@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import 'terms_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -92,7 +93,7 @@ class HelpSupportScreen extends StatelessWidget {
                     icon: CupertinoIcons.doc_text_fill,
                     title: 'Terms of Service',
                     value: 'View terms and conditions',
-                    onTap: () => _openTermsOfService(),
+                    onTap: () => _openTermsOfService(context),
                   ),
                 ],
               ),
@@ -419,8 +420,12 @@ class HelpSupportScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _openTermsOfService() async {
-    // TODO: Add your terms of service URL
+  Future<void> _openTermsOfService(BuildContext context) async {
     HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const TermsScreen(),
+      ),
+    );
   }
 }

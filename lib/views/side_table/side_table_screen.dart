@@ -56,12 +56,13 @@ class _SideTableScreenState extends State<SideTableScreen> {
             }
           });
 
-      // Listen for recent matches in real-time
+      // Listen for recent active matches in real-time
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
       _matchesSubscription = FirebaseFirestore.instance
           .collection('matches')
           .where('users', arrayContains: user.uid)
+          .where('status', isEqualTo: 'active')
           .where(
             'matchedAt',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
@@ -73,7 +74,7 @@ class _SideTableScreenState extends State<SideTableScreen> {
             }
           });
 
-      // Listen for recent chat messages in real-time
+      // Listen for recent active matches in real-time
       _chatSubscription = FirebaseFirestore.instance
           .collection('matches')
           .where('users', arrayContains: user.uid)
@@ -107,16 +108,18 @@ class _SideTableScreenState extends State<SideTableScreen> {
       return;
     }
 
-    // Check for recent messages in active matches
+    // Check for recent active matches only (exclude cancelled/expired matches)
     for (var matchDoc in matchDocs) {
       final matchData = matchDoc.data() as Map<String, dynamic>;
+      final status = matchData['status'] as String?;
       final matchedAt = matchData['matchedAt'] as Timestamp?;
 
-      if (matchedAt != null) {
+      // Only consider active matches for the green indicator
+      if (status == 'active' && matchedAt != null) {
         final matchTime = matchedAt.toDate();
         final now = DateTime.now();
 
-        // If match was created in the last 24 hours, consider it recent
+        // If match was created in the last 24 hours and is still active, consider it recent
         if (now.difference(matchTime).inHours < 24) {
           if (mounted) {
             setState(() {
@@ -128,7 +131,7 @@ class _SideTableScreenState extends State<SideTableScreen> {
       }
     }
 
-    // If no recent matches found, set to false
+    // If no recent active matches found, set to false
     if (mounted) {
       setState(() {
         _hasRecentMatches = false;
