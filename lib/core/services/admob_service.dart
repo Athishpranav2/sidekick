@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'dart:io' show Platform;
 
 class AdMobService {
   // Google AdMob App ID
@@ -8,7 +10,9 @@ class AdMobService {
     if (kDebugMode) {
       return 'ca-app-pub-3940256099942544~3347511713'; // Test app ID
     } else {
-      return 'ca-app-pub-6993710937842311~68811194341'; // Your real app ID
+      return Platform.isIOS
+          ? 'ca-app-pub-6993710937842311~1148649221' // iOS app ID
+          : 'ca-app-pub-6993710937842311~68811194341'; // Android app ID
     }
   }
 
@@ -17,7 +21,9 @@ class AdMobService {
     if (kDebugMode) {
       return 'ca-app-pub-3940256099942544/6300978111'; // Test banner
     } else {
-      return 'ca-app-pub-6993710937842311/7702471362'; // Your real banner
+      return Platform.isIOS
+          ? 'ca-app-pub-6993710937842311/3511088681' // iOS banner
+          : 'ca-app-pub-6993710937842311/7702471362'; // Android banner
     }
   }
 
@@ -33,7 +39,9 @@ class AdMobService {
     if (kDebugMode) {
       return 'ca-app-pub-3940256099942544/5224354917'; // Test rewarded
     } else {
-      return 'ca-app-pub-6993710937842311/YOUR_REWARDED_ID'; // Your real rewarded
+      return Platform.isIOS
+          ? 'ca-app-pub-6993710937842311/8108006911' // iOS rewarded
+          : 'ca-app-pub-6993710937842311/2225124847'; // Android rewarded
     }
   }
 
@@ -104,23 +112,35 @@ class AdMobService {
   // Load rewarded ad
   static Future<RewardedAd?> loadRewardedAd() async {
     try {
-      RewardedAd? rewardedAd;
-      await RewardedAd.load(
-        adUnitId: rewardedAdUnitId,
+      final unitId = rewardedAdUnitId;
+      debugPrint('[AdMob] Loading RewardedAd: $unitId');
+      final completer = Completer<RewardedAd?>();
+
+      RewardedAd.load(
+        adUnitId: unitId,
         request: const AdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
-            rewardedAd = ad;
-            debugPrint('Rewarded ad loaded successfully');
+            debugPrint('[AdMob] Rewarded loaded');
+            if (!completer.isCompleted) completer.complete(ad);
           },
           onAdFailedToLoad: (error) {
-            debugPrint('Rewarded ad failed to load: $error');
+            debugPrint('[AdMob] Rewarded failed to load: $error');
+            if (!completer.isCompleted) completer.complete(null);
           },
         ),
       );
-      return rewardedAd;
+
+      // Guard against never-completing callbacks
+      return completer.future.timeout(
+        const Duration(seconds: 12),
+        onTimeout: () {
+          debugPrint('[AdMob] Rewarded load timed out');
+          return null;
+        },
+      );
     } catch (e) {
-      debugPrint('Rewarded ad error: $e');
+      debugPrint('[AdMob] Rewarded load error: $e');
       return null;
     }
   }

@@ -12,6 +12,7 @@ class UserModel {
   final String? department;
   final String? year;
   final String? rollNumber;
+  final String? instagram;
 
   UserModel({
     required this.uid,
@@ -25,6 +26,7 @@ class UserModel {
     this.department,
     this.year,
     this.rollNumber,
+    this.instagram,
   });
 
   // Convert from Firestore document
@@ -41,6 +43,7 @@ class UserModel {
       department: data['department'],
       year: data['year'],
       rollNumber: data['rollNumber'],
+      instagram: data['instagram'],
     );
   }
 
@@ -58,6 +61,7 @@ class UserModel {
       'department': department,
       'year': year,
       'rollNumber': rollNumber,
+      'instagram': instagram,
     };
   }
 
@@ -74,6 +78,7 @@ class UserModel {
     String? department,
     String? year,
     String? rollNumber,
+    String? instagram,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -87,6 +92,7 @@ class UserModel {
       department: department ?? this.department,
       year: year ?? this.year,
       rollNumber: rollNumber ?? this.rollNumber,
+      instagram: instagram ?? this.instagram,
     );
   }
 

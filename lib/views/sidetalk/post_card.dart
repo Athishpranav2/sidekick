@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../models/post.dart';
 import '../../core/constants/app_colors.dart';
 import 'post_detail_screen.dart';
+import 'user_profile_card.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -173,7 +174,22 @@ class _PostCardState extends State<PostCard>
 
     return Row(
       children: [
-        _buildAvatar(),
+        GestureDetector(
+          onTap: () {
+            if (widget.post.isAnonymous || widget.post.userId == null) {
+              return;
+            }
+            HapticFeedback.selectionClick();
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) =>
+                  UserProfileCard(userId: widget.post.userId!),
+            );
+          },
+          child: _buildAvatar(),
+        ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(

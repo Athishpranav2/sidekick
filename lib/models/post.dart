@@ -4,6 +4,7 @@ class Post {
   final String id;
   final String content;
   final bool isAnonymous;
+  final String? userId;
   final String? username;
   final String? gender; // 'male', 'female', or null for anonymous
   final String timestamp;
@@ -15,6 +16,7 @@ class Post {
     required this.id,
     required this.content,
     required this.isAnonymous,
+    this.userId,
     this.username,
     this.gender,
     required this.timestamp,

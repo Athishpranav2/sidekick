@@ -36,6 +36,43 @@ class OnboardingLogic {
   // Genders
   static const List<String> genders = ['Male', 'Female'];
 
+  // Sanitize Instagram handle
+  static String? sanitizeInstagramHandle(String? input) {
+    if (input == null) return null;
+    String value = input.trim();
+    if (value.isEmpty) return null;
+
+    // Remove URL prefixes
+    value = value
+        .replaceAll(
+          RegExp(r'^https?:\/\/(www\.)?instagram\.com\/', caseSensitive: false),
+          '',
+        )
+        .replaceAll(RegExp(r'^instagram\.com\/', caseSensitive: false), '');
+
+    // Strip query/fragment parts
+    final delimIndex = value.indexOf(RegExp(r'[\/?#]'));
+    if (delimIndex != -1) {
+      value = value.substring(0, delimIndex);
+    }
+
+    // Remove leading '@'
+    if (value.startsWith('@')) {
+      value = value.substring(1);
+    }
+
+    // Keep only valid characters for Instagram handles
+    value = value.replaceAll(RegExp(r'[^A-Za-z0-9._]'), '');
+
+    // Enforce lowercase and length limit (30)
+    value = value.toLowerCase();
+    if (value.length > 30) {
+      value = value.substring(0, 30);
+    }
+
+    return value.isEmpty ? null : value;
+  }
+
   // Check if username is available
   static Future<bool> isUsernameAvailable(String username) async {
     if (username.trim().isEmpty) return false;
@@ -131,15 +168,18 @@ class OnboardingLogic {
   // Extract roll number from email
   static String? extractRollNumberFromEmail(String? email) {
     if (email == null || email.isEmpty) return null;
-    
+
     // Extract roll number from email like "23Z310@PSGTECH.AC.IN"
-    final regex = RegExp(r'^([A-Z0-9]+)@PSGTECH\.AC\.IN$', caseSensitive: false);
+    final regex = RegExp(
+      r'^([A-Z0-9]+)@PSGTECH\.AC\.IN$',
+      caseSensitive: false,
+    );
     final match = regex.firstMatch(email);
-    
+
     if (match != null && match.groupCount >= 1) {
       return match.group(1);
     }
-    
+
     return null;
   }
 
@@ -150,6 +190,7 @@ class OnboardingLogic {
     required String year,
     required String gender, // Added gender parameter
     String? displayName,
+    String? instagram,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found');
@@ -164,7 +205,7 @@ class OnboardingLogic {
       final rollNumber = extractRollNumberFromEmail(user.email);
 
       // Create user document
-      final userData = {
+      final Map<String, dynamic> userData = {
         'username': username.trim(),
         'username_lower': username.trim().toLowerCase(),
         'displayName': displayName?.trim() ?? user.displayName,
@@ -178,6 +219,11 @@ class OnboardingLogic {
         'createdAt': FieldValue.serverTimestamp(),
         'lastLoginAt': FieldValue.serverTimestamp(),
       };
+
+      final sanitizedInsta = sanitizeInstagramHandle(instagram);
+      if (sanitizedInsta != null) {
+        userData['instagram'] = sanitizedInsta;
+      }
 
       await _firestore.collection('users').doc(user.uid).set(userData);
     } catch (e) {

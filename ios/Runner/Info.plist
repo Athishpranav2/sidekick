@@ -61,8 +61,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~3347511713</string>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-6993710937842311~1148649221</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

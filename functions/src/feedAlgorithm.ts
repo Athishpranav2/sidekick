@@ -138,7 +138,10 @@ export const getFeed = onCall(async (request: CallableRequest) => {
         reportCount: post.reportCount || 0,
         isPromoted: post.isPromoted ?? false,
         engagementScore: post.engagementScore || 0.0,
-        authorId: post.authorId || null,
+        // Ensure we always provide an author identifier
+        authorId: post.authorId || (post as any).userId || null,
+        // Back-compat for clients expecting userId
+        userId: (post as any).userId || post.authorId || null,
       };
     });
 

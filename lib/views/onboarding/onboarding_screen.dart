@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
-import '../home/home_screen.dart';
-import '../side_table/side_table_screen.dart';
 import '../navigation/navigation_container.dart';
 import '../../providers/user_provider.dart';
 import '../../core/constants/app_colors.dart';
@@ -271,6 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // Form controllers and state
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _displayNameController = TextEditingController();
+  final TextEditingController _instagramController = TextEditingController();
   final _usernameFormKey = GlobalKey<FormState>();
   final _nameFormKey = GlobalKey<FormState>();
 
@@ -394,6 +394,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         department: _selectedDepartment!,
         year: _selectedYear!,
         gender: _selectedGender!, // Pass the selected gender
+        instagram: _instagramController.text.trim(),
         displayName: _displayNameController.text.trim().isNotEmpty
             ? _displayNameController.text.trim()
             : null,
@@ -508,14 +509,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         _showCustomSnackBar('Please choose an available username', false);
       }
     } else if (_currentPage == 3) {
-      // New gender page logic
       if (_selectedGender != null) {
         _navigateToPage(4);
       } else {
         _showCustomSnackBar('Please select your gender', false);
       }
     } else if (_currentPage == 4) {
-      // Final page
+      _navigateToPage(5);
+    } else if (_currentPage == 5) {
       if (_selectedDepartment != null && _selectedYear != null) {
         _completeOnboarding();
       } else {
@@ -587,6 +588,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         _buildNamePage(size, isTablet),
                         _buildUsernamePage(size, isTablet),
                         _buildGenderPage(size, isTablet), // New page added
+                        _buildInstagramPage(size, isTablet),
                         _buildDetailsPage(size, isTablet),
                       ],
                     ),
@@ -657,7 +659,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               borderRadius: BorderRadius.circular(size.width * 0.04),
             ),
             child: Text(
-              '${_currentPage + 1}/5', // Updated page count
+              '${_currentPage + 1}/6',
               style: TextStyle(
                 color: Colors.grey[400],
                 fontSize: size.width * 0.03,
@@ -679,9 +681,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 2:
         return 'Pick a username';
       case 3:
-        return 'What\'s your gender?'; // New header title
+        return 'What\'s your gender?';
       case 4:
-        return 'Almost done!'; // Page number shifted
+        return 'Add your Instagram';
+      case 5:
+        return 'Almost done!';
       default:
         return 'Setup';
     }
@@ -696,9 +700,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 2:
         return 'Choose something unique';
       case 3:
-        return 'This helps personalize your experience'; // New subtitle
+        return 'This helps personalize your experience';
       case 4:
-        return 'Tell us about your studies'; // Page number shifted
+        return 'Optional — helps friends find you';
+      case 5:
+        return 'Tell us about your studies';
       default:
         return 'Setting up your profile';
     }
@@ -717,10 +723,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           AnimatedContainer(
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOut,
-            width:
-                size.width *
-                0.9 *
-                ((_currentPage + 1) / 5), // Updated page count
+            width: size.width * 0.9 * ((_currentPage + 1) / 6),
             decoration: BoxDecoration(
               color: AppColors.systemRed,
               borderRadius: BorderRadius.circular(size.height * 0.0015),
@@ -1387,7 +1390,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   if (!_isLoading) ...[
                     SizedBox(width: size.width * 0.02),
                     Icon(
-                      _currentPage == 4 ? Icons.check : Icons.arrow_forward,
+                      _currentPage == 5 ? Icons.check : Icons.arrow_forward,
                       color: Colors.white,
                       size: size.width * 0.05,
                     ),
@@ -1401,15 +1404,105 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  // ~~~~~ INSTAGRAM PAGE ~~~~~
+  Widget _buildInstagramPage(Size size, bool isTablet) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: size.height * 0.1),
+              Text(
+                'Add your Instagram',
+                style: TextStyle(
+                  fontSize: size.width * (isTablet ? 0.055 : 0.08),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              SizedBox(height: size.height * 0.02),
+              Text(
+                'Optional — helps friends find you',
+                style: TextStyle(
+                  fontSize: size.width * (isTablet ? 0.03 : 0.04),
+                  color: const Color(0xFF8E8E93),
+                  letterSpacing: -0.2,
+                ),
+              ),
+              SizedBox(height: size.height * 0.06),
+              TextFormField(
+                controller: _instagramController,
+                keyboardAppearance: Brightness.dark,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._]')),
+                  LengthLimitingTextInputFormatter(30),
+                ],
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size.width * (isTablet ? 0.035 : 0.045),
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: '@your_handle',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: size.width * (isTablet ? 0.03 : 0.04),
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.alternate_email,
+                    color: Colors.grey[400],
+                    size: size.width * (isTablet ? 0.05 : 0.06),
+                  ),
+                  helperText:
+                      'Only letters, numbers, periods, and underscores. Max 30.',
+                  helperStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  filled: true,
+                  fillColor: const Color(0xFF1C1C1E),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(size.width * 0.04),
+                    borderSide: const BorderSide(color: Color(0xFF2C2C2E)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(size.width * 0.04),
+                    borderSide: const BorderSide(color: Color(0xFF2C2C2E)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(size.width * 0.04),
+                    borderSide: BorderSide(
+                      color: AppColors.systemRed,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: size.width * 0.05,
+                    vertical: size.height * 0.025,
+                  ),
+                ),
+              ),
+              SizedBox(height: size.height * 0.1),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String _getButtonText() {
     switch (_currentPage) {
       case 0:
         return 'Get Started';
       case 1:
       case 2:
-      case 3: // Updated button text logic
-        return 'Continue';
+      case 3:
       case 4:
+        return 'Continue';
+      case 5:
         return 'Complete Setup';
       default:
         return 'Next';
@@ -1421,6 +1514,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageController.dispose();
     _usernameController.dispose();
     _displayNameController.dispose();
+    _instagramController.dispose();
     _fadeController.dispose();
     _slideController.dispose();
     _debounceTimer?.cancel();
