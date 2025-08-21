@@ -17,8 +17,6 @@ import 'terms_screen.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-
-
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -449,17 +447,6 @@ class ProfileScreen extends StatelessWidget {
                 );
               },
             ),
-            _buildModernOptionTile(
-              icon: CupertinoIcons.bell_circle_fill,
-              title: 'Notifications',
-              subtitle: 'Manage your preferences',
-              color: AppColors.systemRed,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                // TODO: Navigate to notifications
-              },
-            ),
-
           ],
         ),
         const SizedBox(height: 32),
@@ -502,9 +489,7 @@ class ProfileScreen extends StatelessWidget {
               onTap: () {
                 HapticFeedback.lightImpact();
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const TermsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const TermsScreen()),
                 );
               },
             ),

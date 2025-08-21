@@ -47,7 +47,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
   final List<TimeSlot> _selectedTimes = [];
   late DateTime _now;
   late Timer _timer;
-  bool _isTestMode = false;
+
   bool _isJoiningQueue = false;
   bool _isUserMatched = false; // New field to track if user is already matched
   bool _isLoadingStatus = true; // Track loading state
@@ -201,7 +201,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
 
   void _toggleTimeSelection(TimeSlot slot) {
     final DateTime slotTime = _parseTime(slot.time);
-    final bool isPast = !_isTestMode && _now.isAfter(slotTime);
+    final bool isPast = _now.isAfter(slotTime);
 
     // Prevent selection if user is matched, already waiting for this time, or time is past
     if (_isUserMatched || slot.isUserWaiting || isPast) {
@@ -251,29 +251,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
         ),
       );
     }
-  }
-
-  void _toggleTestMode() {
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _isTestMode = !_isTestMode;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF1C1C1E), // Premium dark gray
-        content: Text(
-          'Developer Mode: ${_isTestMode ? "ON" : "OFF"}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   void _showConfirmationDialog() {
@@ -544,14 +521,11 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: GestureDetector(
-          onLongPress: _toggleTestMode,
-          child: Text(
-            'Select Meetup Time',
-            style: TextStyle(
-              fontSize: size.width * 0.045,
-              fontWeight: FontWeight.w600,
-            ),
+        title: Text(
+          'Select Meetup Time',
+          style: TextStyle(
+            fontSize: size.width * 0.045,
+            fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
@@ -804,7 +778,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
   Widget _buildTimeChip(TimeSlot slot, Size size) {
     final bool isSelected = _selectedTimes.contains(slot);
     final DateTime slotTime = _parseTime(slot.time);
-    final bool isPast = !_isTestMode && _now.isAfter(slotTime);
+    final bool isPast = _now.isAfter(slotTime);
     final bool isUserWaiting = slot.isUserWaiting;
 
     Color backgroundColor;
@@ -925,7 +899,7 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen>
         _selectedTimes.isNotEmpty &&
         _selectedTimes.every((slot) {
           final DateTime slotTime = _parseTime(slot.time);
-          return _isTestMode || !_now.isAfter(slotTime);
+          return !_now.isAfter(slotTime);
         });
 
     final bool canConfirm = hasValidTimes && !_isUserMatched;

@@ -250,16 +250,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         _deleteAllMessages();
       }
     }
-
-    // Debug information (remove in production)
-    debugPrint('Chat State Debug:');
-    debugPrint('Current time: $now');
-    debugPrint('Meeting time: $_meetingDateTime');
-    debugPrint('Unlock time: $_chatUnlockTime');
-    debugPrint('End time: $_chatEndTime');
-    debugPrint('Current state: $_chatState');
-    debugPrint('Remaining time: $_remainingTime');
-    debugPrint('---');
   }
 
   void _startCountdownTimer() {
@@ -297,7 +287,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       // Schedule next chat session
       _scheduleNextChatSession();
     } catch (e) {
-      debugPrint('Error deleting messages: $e');
+      // Error deleting messages
     }
   }
 
@@ -310,8 +300,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // Reset to locked state for next session
     _chatState = ChatState.locked;
     _updateChatState();
-
-    debugPrint('Next chat session scheduled for: $_meetingDateTime');
   }
 
   @override
@@ -614,29 +602,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               'Chat opens 5 minutes before your meeting at ${widget.meetingTime}',
               style: TextStyle(color: textSecondary, fontSize: 16, height: 1.4),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.developer_mode, size: 18),
-              label: const Text('Bypass Lock (Test)'),
-              onPressed: () {
-                _countdownTimer?.cancel();
-                setState(() {
-                  _chatState = ChatState.active;
-                });
-                HapticFeedback.heavyImpact();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: darkRed,
-                foregroundColor: textPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-              ),
             ),
           ],
         ),
