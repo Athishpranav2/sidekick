@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:256761319791:android:0e16ba55b820901faad89a",
         "android_client_info": {
-          "package_name": "com.example.campusswift_app"
+          "package_name": "com.sidekick.campus"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "256761319791-7hkiosourr9413fsn6d9f0eqoslu4egn.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.campusswift_app",
+            "package_name": "com.sidekick.campus",
             "certificate_hash": "b8fc7ee628faa8c2cafb542822e7506222cb743c"
           }
         },
@@ -25,7 +25,7 @@
           "client_id": "256761319791-dt2dbl9mlpjc7s5j3n01cod3dpb03isq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.campusswift_app",
+            "package_name": "com.sidekick.campus",
             "certificate_hash": "cd4313977e9aafa119a25672eb548fd08d3c0ff6"
           }
         },

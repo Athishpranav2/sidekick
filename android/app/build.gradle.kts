@@ -1,3 +1,5 @@
+import java.util.Properties
+import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.campusswift_app"
+    namespace = "com.sidekick.campus"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // ✅ Set explicitly
 
@@ -20,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.campusswift_app"
+        applicationId = "com.sidekick.campus"
         minSdk = 23 
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -28,9 +30,30 @@ android {
         multiDexEnabled = true // ✅ Optional safety
     }
 
+    signingConfigs {
+        create("release") {
+            val kp = Properties()
+            val kpFile = rootProject.file("key.properties")
+            if (kpFile.exists()) {
+                kp.load(FileInputStream(kpFile))
+            }
+            val sfProp = kp.getProperty("storeFile") ?: "release-key.jks"
+            val sanitized = if (sfProp.startsWith("app/")) sfProp.removePrefix("app/") else sfProp
+            storeFile = file(sanitized)
+            storePassword = kp.getProperty("storePassword")
+            keyAlias = kp.getProperty("keyAlias")
+            keyPassword = kp.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

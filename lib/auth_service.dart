@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:io' show Platform;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -79,10 +81,108 @@ class AuthService {
     }
   }
 
+  // Sign in with Apple
+  Future<User?> signInWithApple() async {
+    try {
+      // Check if Apple Sign In is available
+      if (!await SignInWithApple.isAvailable()) {
+        throw Exception('Apple Sign In is not available on this device.');
+      }
+
+      // Request credentials from Apple
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        webAuthenticationOptions: WebAuthenticationOptions(
+          clientId: 'com.sideekickk.companion.ios2024', // Your app's service ID
+          redirectUri: Uri.parse(
+            'https://sidekicker-4ef1b.firebaseapp.com/__/auth/handler',
+          ),
+        ),
+      );
+
+      // Create OAuth provider for Apple
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      // Sign in with Firebase
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        oauthCredential,
+      );
+
+      // Handle display name if it's the first time signing in
+      final user = userCredential.user;
+      if (user != null && user.displayName == null) {
+        final appleDisplayName =
+            appleCredential.givenName != null &&
+                appleCredential.familyName != null
+            ? '${appleCredential.givenName} ${appleCredential.familyName}'
+            : null;
+
+        if (appleDisplayName != null) {
+          await user.updateDisplayName(appleDisplayName);
+        }
+      }
+
+      // Apply the same email domain restriction as Google sign-in
+      if (user?.email != null && !user!.email!.endsWith('@psgtech.ac.in')) {
+        await _auth.signOut();
+        throw Exception('Sorry, only for PSG students for now.');
+      }
+
+      return user;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      switch (e.code) {
+        case AuthorizationErrorCode.canceled:
+          // User cancelled the sign-in
+          return null;
+        case AuthorizationErrorCode.failed:
+          throw Exception('Apple Sign In failed. Please try again.');
+        case AuthorizationErrorCode.invalidResponse:
+          throw Exception('Invalid response from Apple. Please try again.');
+        case AuthorizationErrorCode.notHandled:
+          throw Exception('Apple Sign In not handled properly.');
+        case AuthorizationErrorCode.unknown:
+        default:
+          throw Exception('An unknown error occurred during Apple Sign In.');
+      }
+    } on FirebaseAuthException catch (e) {
+      // Handle specific Firebase Auth errors
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          throw Exception(
+            'An account already exists with a different sign-in method.',
+          );
+        case 'invalid-credential':
+          throw Exception('Invalid credentials. Please try again.');
+        case 'user-disabled':
+          throw Exception('This account has been disabled.');
+        case 'user-not-found':
+          throw Exception('No account found with this email.');
+        case 'network-request-failed':
+          throw Exception('Network error. Please check your connection.');
+        default:
+          throw Exception('Authentication failed. Please try again.');
+      }
+    } catch (e) {
+      print("Apple Auth Error: $e");
+      rethrow;
+    }
+  }
+
+  // Check if Apple Sign In is available on this platform
+  Future<bool> isAppleSignInAvailable() async {
+    return await SignInWithApple.isAvailable();
+  }
+
   // Sign out
   Future<void> signOut() async {
     try {
-      // Sign out from both services
+      // Sign out from all services (Google and Apple are handled by Firebase Auth)
       await Future.wait([_googleSignIn.signOut(), _auth.signOut()]);
     } catch (e) {
       print("Error during sign out: $e");

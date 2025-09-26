@@ -14,7 +14,29 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
-  bool _isLoading = false;
+  bool _isLoadingGoogle = false;
+  bool _isLoadingApple = false;
+  bool _isAppleSignInAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAppleSignInAvailability();
+  }
+
+  // Check if Apple Sign In is available
+  Future<void> _checkAppleSignInAvailability() async {
+    try {
+      final isAvailable = await _authService.isAppleSignInAvailable();
+      if (mounted) {
+        setState(() {
+          _isAppleSignInAvailable = isAvailable;
+        });
+      }
+    } catch (e) {
+      print('Error checking Apple Sign In availability: $e');
+    }
+  }
 
   // Method to create user document if it doesn't exist
   Future<void> _createUserDocumentIfNeeded(User user) async {
@@ -39,17 +61,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Method to handle the sign-in logic
-  Future<void> _handleSignIn() async {
+  // Method to handle Google sign-in
+  Future<void> _handleGoogleSignIn() async {
     // Prevent multiple taps while loading
-    if (_isLoading) return;
+    if (_isLoadingGoogle || _isLoadingApple) return;
 
     setState(() {
-      _isLoading = true;
+      _isLoadingGoogle = true;
     });
 
     try {
-      // Attempt to sign in
+      // Attempt to sign in with Google
       await _authService.signInWithGoogle();
 
       // After successful sign-in, create user document if needed
@@ -61,60 +83,97 @@ class _LoginScreenState extends State<LoginScreen> {
       // If successful, the AuthWrapper/SplashScreenWrapper will handle navigation
       // based on onboarding status
     } catch (e) {
-      // If an error occurs, show a premium snackbar
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.fixed,
-            content: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2E), // Dark grey
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF3C3C3E), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF48484A),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.info_outline_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      e.toString().replaceFirst('Exception: ', ''),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: -0.1,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
+      _showErrorSnackBar(e.toString());
     }
 
     // Always reset loading state after the try-catch block
     if (mounted) {
       setState(() {
-        _isLoading = false;
+        _isLoadingGoogle = false;
       });
+    }
+  }
+
+  // Method to handle Apple sign-in
+  Future<void> _handleAppleSignIn() async {
+    // Prevent multiple taps while loading
+    if (_isLoadingGoogle || _isLoadingApple) return;
+
+    setState(() {
+      _isLoadingApple = true;
+    });
+
+    try {
+      // Attempt to sign in with Apple
+      await _authService.signInWithApple();
+
+      // After successful sign-in, create user document if needed
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _createUserDocumentIfNeeded(user);
+      }
+
+      // If successful, the AuthWrapper/SplashScreenWrapper will handle navigation
+      // based on onboarding status
+    } catch (e) {
+      _showErrorSnackBar(e.toString());
+    }
+
+    // Always reset loading state after the try-catch block
+    if (mounted) {
+      setState(() {
+        _isLoadingApple = false;
+      });
+    }
+  }
+
+  // Method to show error snackbar
+  void _showErrorSnackBar(String errorMessage) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.fixed,
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C2C2E), // Dark grey
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF3C3C3E), width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF48484A),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    errorMessage.replaceFirst('Exception: ', ''),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -194,12 +253,87 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              // Bottom section with updated button
+              // Bottom section with sign-in buttons
               Expanded(
                 flex: 2,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    // Apple Sign-In Button (only show if available)
+                    if (_isAppleSignInAvailable) ...[
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF2C2C2E),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: _handleAppleSignIn,
+                            child: Center(
+                              child: _isLoadingApple
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.black,
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.apple_rounded,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        const Text(
+                                          'Continue with Apple',
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                            letterSpacing: -0.2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     // Google Sign-In Button
                     Container(
                       width: double.infinity,
@@ -223,11 +357,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          // Call the new handler method
-                          onTap: _handleSignIn,
+                          onTap: _handleGoogleSignIn,
                           child: Center(
-                            // Show a loading indicator or the button text
-                            child: _isLoading
+                            child: _isLoadingGoogle
                                 ? const SizedBox(
                                     width: 24,
                                     height: 24,
