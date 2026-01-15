@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.sidekick.campus"
+    namespace = "com.example.campusswift_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // ✅ Set explicitly
 
@@ -22,8 +22,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sidekick.campus"
-        minSdk = 23 
+        applicationId = "com.example.campusswift_app"
+        minSdk = flutter.minSdkVersion 
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -31,18 +31,18 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val kp = Properties()
-            val kpFile = rootProject.file("key.properties")
-            if (kpFile.exists()) {
+        val kpFile = rootProject.file("key.properties")
+        if (kpFile.exists()) {
+            create("release") {
+                val kp = Properties()
                 kp.load(FileInputStream(kpFile))
+                val sfProp = kp.getProperty("storeFile") ?: "release-key.jks"
+                val sanitized = if (sfProp.startsWith("app/")) sfProp.removePrefix("app/") else sfProp
+                storeFile = file(sanitized)
+                storePassword = kp.getProperty("storePassword")
+                keyAlias = kp.getProperty("keyAlias")
+                keyPassword = kp.getProperty("keyPassword")
             }
-            val sfProp = kp.getProperty("storeFile") ?: "release-key.jks"
-            val sanitized = if (sfProp.startsWith("app/")) sfProp.removePrefix("app/") else sfProp
-            storeFile = file(sanitized)
-            storePassword = kp.getProperty("storePassword")
-            keyAlias = kp.getProperty("keyAlias")
-            keyPassword = kp.getProperty("keyPassword")
         }
     }
 
@@ -50,10 +50,13 @@ android {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("release")
+            val releaseConfig = signingConfigs.findByName("release")
+            if (releaseConfig != null) {
+                signingConfig = releaseConfig
+            }
         }
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            // Use default debug signing config; no explicit release signing
         }
     }
 }

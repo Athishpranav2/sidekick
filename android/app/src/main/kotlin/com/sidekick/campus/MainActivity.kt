@@ -1,5 +1,3 @@
 package com.sidekick.campus
 
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity: FlutterActivity() {}
+// Legacy stub; MainActivity moved to com.example.campusswift_app

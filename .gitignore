@@ -45,3 +45,10 @@ app.*.map.json
 /android/app/release
 
 .config/
+# BMAD and AI agent configs
+.gemini/
+.github/
+bmad/
+docs/
+GEMINI.md
+fix_line_endings.sh

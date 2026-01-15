@@ -1,4 +1,4 @@
-package com.sidekick.campus
+package com.example.campusswift_app
 
 import io.flutter.embedding.android.FlutterActivity
 

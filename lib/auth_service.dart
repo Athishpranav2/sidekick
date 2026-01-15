@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -83,10 +87,63 @@ class AuthService {
   // Sign in with Apple
   Future<User?> signInWithApple() async {
     try {
+      // On web or Android, use Firebase OAuth provider directly (popup or redirect)
+      // Android can't do native Apple Sign-In; sign_in_with_apple uses a web redirect
+      // which triggers sessionStorage issues. Use Firebase linkWithPopup/signInWithCredential instead.
+      final bool useFirebaseOAuth = kIsWeb || defaultTargetPlatform == TargetPlatform.android;
+
+      print("signInWithApple: useFirebaseOAuth=$useFirebaseOAuth, platform=$defaultTargetPlatform");
+
+      if (useFirebaseOAuth) {
+        // For web, set persistence to LOCAL
+        if (kIsWeb) {
+          try {
+            await _auth.setPersistence(Persistence.LOCAL);
+          } catch (_) {}
+        }
+
+        final provider = OAuthProvider("apple.com");
+        provider.addScope('email');
+        provider.addScope('name');
+
+        print("signInWithApple: Calling Firebase signInWithProvider for Apple...");
+
+        UserCredential cred;
+        if (kIsWeb) {
+          // Prefer popup on web
+          try {
+            cred = await _auth.signInWithPopup(provider);
+          } on FirebaseAuthException catch (e) {
+            if (e.code == 'popup-blocked' || e.code == 'popup-closed-by-user') {
+              await _auth.signInWithRedirect(provider);
+              return null; // Will complete on redirect result
+            }
+            rethrow;
+          }
+        } else {
+          // On Android, signInWithProvider opens system browser / Chrome Custom Tab
+          cred = await _auth.signInWithProvider(provider);
+        }
+
+        print("signInWithApple: Got credential, user=${cred.user?.uid}, email=${cred.user?.email}");
+
+        final user = cred.user;
+        if (user != null && user.email != null && !user.email!.endsWith('@psgtech.ac.in')) {
+          await _auth.signOut();
+          throw Exception('Sorry, only for PSG students for now.');
+        }
+        return user;
+      }
+
+      // Native iOS/macOS flow using sign_in_with_apple package
       // Check if Apple Sign In is available
       if (!await SignInWithApple.isAvailable()) {
         throw Exception('Apple Sign In is not available on this device.');
       }
+
+      // Generate and use a nonce for security
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
 
       // Request credentials from Apple
       final appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -94,11 +151,11 @@ class AuthService {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        nonce: nonce,
         webAuthenticationOptions: WebAuthenticationOptions(
-          clientId: 'com.sidekick.campus.service', // Your app's service ID
-          redirectUri: Uri.parse(
-            'https://sidekicker-4ef1b.firebaseapp.com/__/auth/handler',
-          ),
+          clientId: 'com.sidekick.campus.service',
+          // For mobile this is ignored; for web we use Firebase popup above
+          redirectUri: Uri.parse('https://sidekicker-4ef1b.firebaseapp.com/__/auth/handler'),
         ),
       );
 
@@ -106,6 +163,7 @@ class AuthService {
       final oauthCredential = OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
+        rawNonce: rawNonce,
       );
 
       // Sign in with Firebase
@@ -150,6 +208,7 @@ class AuthService {
           throw Exception('An unknown error occurred during Apple Sign In.');
       }
     } on FirebaseAuthException catch (e) {
+      print("Firebase Auth Exception for Apple Sign-In: code=${e.code}, message=${e.message}");
       // Handle specific Firebase Auth errors
       switch (e.code) {
         case 'account-exists-with-different-credential':
@@ -157,6 +216,8 @@ class AuthService {
             'An account already exists with a different sign-in method.',
           );
         case 'invalid-credential':
+          // Log full details for debugging
+          print("Invalid credential details: ${e.credential}, plugin=${e.plugin}");
           throw Exception('Invalid credentials. Please try again.');
         case 'user-disabled':
           throw Exception('This account has been disabled.');
@@ -165,16 +226,33 @@ class AuthService {
         case 'network-request-failed':
           throw Exception('Network error. Please check your connection.');
         default:
-          throw Exception('Authentication failed. Please try again.');
+          print("Unhandled Firebase Auth error code: ${e.code}");
+          throw Exception('Authentication failed: ${e.message ?? e.code}');
       }
     } catch (e) {
-      print("Apple Auth Error: $e");
+      print("Apple Auth Error (non-Firebase): $e");
       rethrow;
     }
   }
 
+  // Utils for generating a cryptographically secure nonce for Apple Sign In
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   // Check if Apple Sign In is available on this platform
   Future<bool> isAppleSignInAvailable() async {
+    if (kIsWeb) return true; // Firebase popup/redirect
+    if (defaultTargetPlatform == TargetPlatform.android) return true; // Firebase signInWithProvider
+    // On iOS/macOS, check native availability
     return await SignInWithApple.isAvailable();
   }
 
