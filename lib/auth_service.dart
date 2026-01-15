@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'dart:io' show Platform;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -96,7 +95,7 @@ class AuthService {
           AppleIDAuthorizationScopes.fullName,
         ],
         webAuthenticationOptions: WebAuthenticationOptions(
-          clientId: 'com.sideekickk.companion.ios2024', // Your app's service ID
+          clientId: 'com.sidekick.campus.service', // Your app's service ID
           redirectUri: Uri.parse(
             'https://sidekicker-4ef1b.firebaseapp.com/__/auth/handler',
           ),
